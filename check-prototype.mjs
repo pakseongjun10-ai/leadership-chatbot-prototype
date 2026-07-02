@@ -21,9 +21,17 @@ const html = readFileSync("index.html", "utf8");
   "다음 질문이 필요한 이유",
   "이 화면에서 결정할 것",
   "상황 요약 → 공감/직접 답변 → 선배 경험 → 퀵가이드",
+  "typeText",
+  "appendRenderedItem",
+  "removeElement",
+  "thinkingLabel",
+  "생각을 정리하는 중",
+  "관련 경험을 살펴보는 중",
+  "실행안으로 압축하는 중",
 ].forEach((text) => assert(html.includes(text), `Missing text: ${text}`));
 
 [
   "원문 맥락 보기",
   "실행계획에 저장",
+  "chatLog.innerHTML=s.messages.length",
 ].forEach((text) => assert(!html.includes(text), `Old text remains: ${text}`));

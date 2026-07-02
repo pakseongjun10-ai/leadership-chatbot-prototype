@@ -183,7 +183,8 @@
     .probe-card strong{display:block;margin-bottom:2px;color:var(--cobalt);font-size:11px}
     .probe-card svg{flex:0 0 17px;width:17px;height:17px;margin-top:1px;color:var(--cobalt);stroke-width:1.8}
 
-    .typing{display:flex;gap:4px;align-items:center;height:18px}
+    .typing-label{display:inline-block;margin-right:8px;color:var(--black-60);font-size:12px}
+    .typing{display:inline-flex;gap:4px;align-items:center;height:18px;vertical-align:middle}
     .typing span{width:5px;height:5px;border-radius:50%;background:var(--muted-light);animation:typing 1.1s infinite}
     .typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
     @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
@@ -472,24 +473,57 @@
 
     function esc(value=''){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
     function now(){return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});}
-    function message(role,html){return {type:'message',role,html,time:now()};}
+    function message(role,html){return {type:'message',role,html,time:now(),id:crypto.randomUUID()};}
     function quick(options){return {type:'quick',options};}
     function probe(text){return {type:'probe',text};}
     function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
     function isCurrentSequence(key,token){return states[key]&&states[key].sequence===token;}
-    function removeTyping(key){states[key].messages=states[key].messages.filter(item=>item.type!=='typing');}
+    function thinkingLabel(step){return step?.thinking||'생각을 정리하는 중';}
+    function removeElement(id){document.querySelector(`[data-id="${id}"]`)?.remove();}
+    function removeTyping(key){states[key].messages=states[key].messages.filter(item=>item.type!=='typing');document.querySelectorAll('[data-kind="typing"]').forEach(node=>node.remove());}
     function repaint(key){if(activeCase===key)render();}
+    function scrollChat(){requestAnimationFrame(()=>{chatLog.scrollTo({top:chatLog.scrollHeight,behavior:'smooth'})});}
+    async function typeText(el,html){
+      const template=document.createElement('template');
+      template.innerHTML=html;
+      el.textContent='';
+      async function walk(source,target){
+        for(const node of source.childNodes){
+          if(node.nodeType===Node.TEXT_NODE){
+            for(const char of node.textContent||''){
+              target.append(char);scrollChat();await delay(14);
+            }
+          }else if(node.nodeType===Node.ELEMENT_NODE){
+            const clone=node.cloneNode(false);
+            target.appendChild(clone);
+            await walk(node,clone);
+          }
+        }
+      }
+      await walk(template.content,el);
+    }
     async function revealBotSteps(key,token,steps){
       const state=states[key];
       for(const step of steps){
         if(!isCurrentSequence(key,token))return false;
-        state.messages.push({type:'typing'});repaint(key);
+        const typing={type:'typing',id:crypto.randomUUID(),label:thinkingLabel(step)};
+        state.messages.push(typing);if(activeCase===key)appendRenderedItem(typing);
         await delay(step.wait||520);
         if(!isCurrentSequence(key,token))return false;
-        removeTyping(key);state.messages.push(...step.items);repaint(key);
+        removeElement(typing.id);removeTyping(key);
+        state.messages.push(...step.items);
+        if(activeCase===key){for(const item of step.items)await appendRenderedItem(item)}
+        renderDecision();
         if(step.pause)await delay(step.pause);
       }
-      if(isCurrentSequence(key,token)){state.busy=false;repaint(key);return true;}
+      if(isCurrentSequence(key,token)){
+        state.busy=false;
+        if(activeCase===key){
+          document.getElementById('composerLabel').textContent=state.stage<3?'선택하거나 직접 답변하세요':'추가 상황을 입력할 수 있습니다';
+          chatInput.disabled=false;document.getElementById('sendButton').disabled=false;renderDecision();
+        }
+        return true;
+      }
       return false;
     }
     function empathyReply(d){return `<span class="empathy-lead">먼저 마음을 짚어보면</span>${d.empathy}`;}
@@ -520,14 +554,26 @@
     function renderMessage(item){
       if(item.type==='message'){
         const bot=item.role==='bot';
-        return `<div class="message-row ${item.role}">${bot?'<div class="mini-avatar">AI</div>':''}<div class="message-group"><div class="bubble">${item.html}</div><div class="message-meta">${item.time}</div></div></div>`;
+        return `<div class="message-row ${item.role}" data-id="${item.id||''}">${bot?'<div class="mini-avatar">AI</div>':''}<div class="message-group"><div class="bubble">${item.html}</div><div class="message-meta">${item.time}</div></div></div>`;
       }
-      if(item.type==='quick') return `<div class="quick-replies">${item.options.map(option=>`<button class="quick" data-reply="${esc(option)}">${esc(option)}</button>`).join('')}</div>`;
-      if(item.type==='probe') return `<div class="probe-card">${icon.summary}<div><strong>제가 지금 확인하려는 것</strong>${esc(item.text)}</div></div>`;
+      if(item.type==='quick') return `<div class="quick-replies" data-id="${item.id||crypto.randomUUID()}">${item.options.map(option=>`<button class="quick" data-reply="${esc(option)}">${esc(option)}</button>`).join('')}</div>`;
+      if(item.type==='probe') return `<div class="probe-card" data-id="${item.id||crypto.randomUUID()}">${icon.summary}<div><strong>제가 지금 확인하려는 것</strong>${esc(item.text)}</div></div>`;
       if(item.type==='summary') return renderSummary();
       if(item.type==='senior') return renderSenior();
       if(item.type==='action') return renderAction();
+      if(item.type==='typing') return `<div class="message-row bot" data-id="${item.id}" data-kind="typing"><div class="mini-avatar">AI</div><div class="message-group"><div class="bubble"><span class="typing-label">${esc(item.label)}</span><span class="typing"><span></span><span></span><span></span></span></div></div></div>`;
       return '';
+    }
+
+    async function appendRenderedItem(item){
+      const wrapper=document.createElement('div');
+      wrapper.innerHTML=renderMessage(item);
+      const node=wrapper.firstElementChild;
+      if(!node)return;
+      chatLog.appendChild(node);
+      const bubble=node.querySelector('.bubble');
+      if(item.type==='message'&&item.role==='bot'&&bubble){await typeText(bubble,item.html)}
+      scrollChat();
     }
 
     function summaryData(){
@@ -622,12 +668,21 @@
 
     function render(){
       const s=states[activeCase],d=cases[activeCase];
-      chatLog.innerHTML=s.messages.length?s.messages.map(renderMessage).join(''):emptyState();
+      chatLog.replaceChildren();
+      if(s.messages.length){
+        const template=document.createElement('template');
+        template.innerHTML=s.messages.map(renderMessage).join('');
+        chatLog.append(template.content);
+      }else{
+        const template=document.createElement('template');
+        template.innerHTML=emptyState();
+        chatLog.append(template.content);
+      }
       document.getElementById('composerLabel').textContent=s.stage===0?'고민을 직접 입력하세요':s.stage<3?'선택하거나 직접 답변하세요':'추가 상황을 입력할 수 있습니다';
       chatInput.disabled=s.busy;
       document.getElementById('sendButton').disabled=s.busy;
       renderDecision();
-      requestAnimationFrame(()=>{chatLog.scrollTop=chatLog.scrollHeight});
+      scrollChat();
     }
 
     async function startConversation(text){
@@ -638,8 +693,8 @@
       s.messages=[message('user',esc(s.question))];
       chatInput.value='';render();
       await revealBotSteps(key,token,[
-        {wait:480,items:[message('bot',empathyReply(d))],pause:240},
-        {wait:520,items:[message('bot',`<span class="context-lead">지금은 이렇게 연결해서 보고 있어요</span>${d.immediate}<br><br>답을 바로 확정하기보다, 먼저 방향을 바꾸는 핵심 맥락 하나만 좁혀볼게요.`),probe('이 선택에 따라 답변이 조언형, 면담 준비형, 실행안형 중 어디에 가까운지 달라집니다.'),message('bot',`<strong>${esc(d.q1)}</strong>`),quick(d.o1)]}
+        {wait:480,thinking:'생각을 정리하는 중',items:[message('bot',empathyReply(d))],pause:240},
+        {wait:520,thinking:'답변 방향을 고르는 중',items:[message('bot',`<span class="context-lead">지금은 이렇게 연결해서 보고 있어요</span>${d.immediate}<br><br>답을 바로 확정하기보다, 먼저 방향을 바꾸는 핵심 맥락 하나만 좁혀볼게요.`),probe('이 선택에 따라 답변이 조언형, 면담 준비형, 실행안형 중 어디에 가까운지 달라집니다.'),message('bot',`<strong>${esc(d.q1)}</strong>`),quick(d.o1)]}
       ]);
     }
 
@@ -649,23 +704,28 @@
       if(s.stage===0){await startConversation(text);return}
       s.sequence=(s.sequence||0)+1;const token=s.sequence;
       s.messages=s.messages.filter(item=>item.type!=='quick'&&item.type!=='typing');
-      s.messages.push(message('user',esc(text)));s.answers.push(text);chatInput.value='';s.busy=true;render();
+      document.querySelectorAll('.quick-replies,[data-kind="typing"]').forEach(node=>node.remove());
+      const userMessage=message('user',esc(text));
+      s.messages.push(userMessage);s.answers.push(text);chatInput.value='';s.busy=true;
+      await appendRenderedItem(userMessage);
+      document.getElementById('composerLabel').textContent=s.stage<3?'선택하거나 직접 답변하세요':'추가 상황을 입력할 수 있습니다';
+      chatInput.disabled=true;document.getElementById('sendButton').disabled=true;renderDecision();
       if(s.stage===1){
         s.stage=2;
         await revealBotSteps(key,token,[
-          {wait:520,items:[message('bot',followupReply(d,text)),probe('방금 답변은 큰 방향이고, 이번 질문은 실제 대화 톤과 위험도를 조절하기 위한 확인입니다.'),quick(d.o2)]}
+          {wait:520,thinking:'다음 확인 질문을 고르는 중',items:[message('bot',followupReply(d,text)),probe('방금 답변은 큰 방향이고, 이번 질문은 실제 대화 톤과 위험도를 조절하기 위한 확인입니다.'),quick(d.o2)]}
         ]);
       }else if(s.stage===2){
         s.stage=3;
         await revealBotSteps(key,token,[
-          {wait:520,items:[message('bot','좋아요. 방금 두 답변을 이어서 보면, 먼저 상황을 이렇게 요약할 수 있습니다.'),{type:'summary'}],pause:300},
-          {wait:560,items:[message('bot',empathyAnswer())],pause:320},
-          {wait:620,items:[message('bot','이제 이 답변을 혼자 만든 조언처럼 보이지 않게, 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:380},
-          {wait:680,items:[message('bot','마지막으로 퀵가이드로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
+          {wait:520,thinking:'상황을 요약하는 중',items:[message('bot','좋아요. 방금 두 답변을 이어서 보면, 먼저 상황을 이렇게 요약할 수 있습니다.'),{type:'summary'}],pause:300},
+          {wait:560,thinking:'고민의 무게를 짚는 중',items:[message('bot',empathyAnswer())],pause:320},
+          {wait:620,thinking:'관련 경험을 살펴보는 중',items:[message('bot','이제 이 답변을 혼자 만든 조언처럼 보이지 않게, 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:380},
+          {wait:680,thinking:'실행안으로 압축하는 중',items:[message('bot','마지막으로 퀵가이드로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
         ]);
       }else{
         await revealBotSteps(key,token,[
-          {wait:480,items:[message('bot',`추가로 알려주신 <strong>${esc(text)}</strong>도 중요한 조건이네요. 현재 실행안에서 이 부분을 먼저 확인해보세요.`)]}
+          {wait:480,thinking:'추가 조건을 반영하는 중',items:[message('bot',`추가로 알려주신 <strong>${esc(text)}</strong>도 중요한 조건이네요. 현재 실행안에서 이 부분을 먼저 확인해보세요.`)]}
         ]);
       }
     }
@@ -678,19 +738,19 @@
       s.question=d.example;s.stage=1;s.answers=[];s.seniorIndex=0;s.saved=false;s.busy=true;
       s.messages=[message('user',esc(d.example))];render();showToast('전체 대화 흐름을 순차적으로 재생합니다.');
       if(!await revealBotSteps(key,token,[
-        {wait:420,items:[message('bot',empathyReply(d))],pause:180},
-        {wait:470,items:[message('bot',`<span class="context-lead">지금은 이렇게 연결해서 보고 있어요</span>${d.immediate}<br><br>답을 바로 확정하기보다, 먼저 방향을 바꾸는 핵심 맥락 하나만 좁혀볼게요.`),probe('이 선택에 따라 답변이 조언형, 면담 준비형, 실행안형 중 어디에 가까운지 달라집니다.'),message('bot',`<strong>${esc(d.q1)}</strong>`)]}
+        {wait:420,thinking:'생각을 정리하는 중',items:[message('bot',empathyReply(d))],pause:180},
+        {wait:470,thinking:'답변 방향을 고르는 중',items:[message('bot',`<span class="context-lead">지금은 이렇게 연결해서 보고 있어요</span>${d.immediate}<br><br>답을 바로 확정하기보다, 먼저 방향을 바꾸는 핵심 맥락 하나만 좁혀볼게요.`),probe('이 선택에 따라 답변이 조언형, 면담 준비형, 실행안형 중 어디에 가까운지 달라집니다.'),message('bot',`<strong>${esc(d.q1)}</strong>`)]}
       ]))return;
       if(!isCurrentSequence(key,token))return;
       s.busy=true;s.messages.push(message('user',esc(d.demo[0])));s.answers.push(d.demo[0]);s.stage=2;render();
-      if(!await revealBotSteps(key,token,[{wait:470,items:[message('bot',followupReply(d,d.demo[0])),probe('방금 답변은 큰 방향이고, 이번 질문은 실제 대화 톤과 위험도를 조절하기 위한 확인입니다.')]}]))return;
+      if(!await revealBotSteps(key,token,[{wait:470,thinking:'다음 확인 질문을 고르는 중',items:[message('bot',followupReply(d,d.demo[0])),probe('방금 답변은 큰 방향이고, 이번 질문은 실제 대화 톤과 위험도를 조절하기 위한 확인입니다.')]}]))return;
       if(!isCurrentSequence(key,token))return;
       s.busy=true;s.messages.push(message('user',esc(d.demo[1])));s.answers.push(d.demo[1]);s.stage=3;render();
       await revealBotSteps(key,token,[
-        {wait:500,items:[message('bot','좋아요. 방금 두 답변을 이어서 보면, 먼저 상황을 이렇게 요약할 수 있습니다.'),{type:'summary'}],pause:250},
-        {wait:540,items:[message('bot',empathyAnswer())],pause:280},
-        {wait:580,items:[message('bot','이제 이 답변을 혼자 만든 조언처럼 보이지 않게, 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:320},
-        {wait:640,items:[message('bot','마지막으로 퀵가이드로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
+        {wait:500,thinking:'상황을 요약하는 중',items:[message('bot','좋아요. 방금 두 답변을 이어서 보면, 먼저 상황을 이렇게 요약할 수 있습니다.'),{type:'summary'}],pause:250},
+        {wait:540,thinking:'고민의 무게를 짚는 중',items:[message('bot',empathyAnswer())],pause:280},
+        {wait:580,thinking:'관련 경험을 살펴보는 중',items:[message('bot','이제 이 답변을 혼자 만든 조언처럼 보이지 않게, 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:320},
+        {wait:640,thinking:'실행안으로 압축하는 중',items:[message('bot','마지막으로 퀵가이드로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
       ]);
     }
 
