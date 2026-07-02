@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>리더십 AI 코치 챗봇 흐름 프로토타입</title>
+  <style>
+    :root {
+      --navy: #0f2438;
+      --navy-2: #173552;
+      --teal: #0f766e;
+      --teal-2: #0b5f59;
+      --teal-soft: #e4f4f1;
+      --amber: #b7791f;
+      --amber-soft: #fff3dc;
+      --blue: #2563eb;
+      --blue-soft: #eaf1ff;
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --line: #dce3e8;
+      --text: #17212b;
+      --muted: #667280;
+      --soft: #f8fafb;
+      --shadow: 0 18px 50px rgba(15, 36, 56, .10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+    }
+
+    button, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 28px 18px;
+      background: var(--navy);
+      color: #fff;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--teal);
+      font-weight: 900;
+    }
+
+    .brand-title { font-size: 17px; font-weight: 850; }
+    .brand-sub { margin-top: 4px; color: #b9c8d8; font-size: 12px; }
+
+    .nav {
+      display: grid;
+      gap: 10px;
+      margin-top: 38px;
+    }
+
+    .nav button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: transparent;
+      color: #c8d5e3;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    .nav button.active {
+      background: var(--navy-2);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .side-note {
+      position: absolute;
+      right: 18px;
+      bottom: 24px;
+      left: 18px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 12px;
+      color: #bdd0df;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .workspace {
+      min-width: 0;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 68px;
+      padding: 0 30px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(10px);
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 11px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .chip.ready {
+      border-color: #bfe4dc;
+      background: var(--teal-soft);
+      color: var(--teal-2);
+    }
+
+    .page {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 22px;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 26px 28px 42px;
+    }
+
+    .main-column {
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .decision-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .scenario {
+      min-height: 94px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+      background: var(--panel);
+      text-align: left;
+      box-shadow: 0 2px 10px rgba(15,36,56,.03);
+    }
+
+    .scenario.active {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .scenario strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .scenario span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .chat-shell {
+      display: grid;
+      grid-template-rows: auto minmax(430px, 1fr) auto;
+      min-height: calc(100vh - 220px);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .chat-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--soft);
+    }
+
+    .chat-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .chat-title strong { font-size: 16px; }
+    .chat-title span { color: var(--muted); font-size: 12px; }
+
+    .stage-pills {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .stage-pills span {
+      border-radius: 999px;
+      padding: 6px 9px;
+      background: #eef2f5;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .stage-pills span.active {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .messages {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: auto;
+      padding: 22px;
+    }
+
+    .message {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 720px);
+      gap: 11px;
+      align-items: start;
+    }
+
+    .message.user {
+      justify-content: end;
+      grid-template-columns: minmax(0, 620px) 34px;
+    }
+
+    .avatar {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 9px;
+      background: var(--teal);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .message.user .avatar {
+      grid-column: 2;
+      background: var(--amber);
+    }
+
+    .bubble {
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 14px 15px;
+      background: #fff;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      font-size: 14px;
+    }
+
+    .message.user .bubble {
+      grid-column: 1;
+      grid-row: 1;
+      background: var(--amber-soft);
+    }
+
+    .choice-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .choice {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 11px;
+      background: #fff;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .choice:hover {
+      border-color: var(--teal);
+      color: var(--teal-2);
+    }
+
+    details.reference {
+      margin-top: 13px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+
+    details.reference summary {
+      color: var(--teal-2);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .reference-card {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 11px;
+      background: var(--soft);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .reference-card strong { font-size: 13px; }
+    .reference-card span { color: var(--muted); }
+
+    .composer {
+      display: grid;
+      grid-template-columns: 1fr 46px;
+      gap: 10px;
+      padding: 16px;
+      border-top: 1px solid var(--line);
+      background: var(--soft);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 72px;
+      max-height: 150px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 13px;
+      outline: none;
+      line-height: 1.5;
+    }
+
+    textarea:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, .12);
+    }
+
+    .send {
+      align-self: end;
+      width: 46px;
+      height: 46px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--teal);
+      color: #fff;
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .side-panel {
+      position: sticky;
+      top: 92px;
+      display: grid;
+      gap: 14px;
+      align-self: start;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: 0 2px 10px rgba(15,36,56,.03);
+    }
+
+    .card h2 {
+      margin: 0;
+      padding: 16px 16px 0;
+      font-size: 16px;
+    }
+
+    .flow {
+      display: grid;
+      gap: 0;
+      padding: 8px 16px 16px;
+    }
+
+    .flow-step {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid #edf1f4;
+    }
+
+    .flow-step:last-child { border-bottom: 0; }
+
+    .num {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      border-radius: 50%;
+      background: #e7edf2;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .flow-step.active .num {
+      background: var(--teal);
+      color: #fff;
+    }
+
+    .flow-step strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .flow-step span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .decision-card {
+      padding: 16px;
+    }
+
+    .decision-card p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .copy {
+      width: 100%;
+      margin-top: 13px;
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 12px;
+      background: var(--navy);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translate(-50%, 12px);
+      padding: 10px 15px;
+      border-radius: 999px;
+      background: var(--navy);
+      color: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s;
+      font-size: 13px;
+      z-index: 10;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar {
+        position: static;
+        height: auto;
+        padding: 18px;
+      }
+      .nav, .side-note { display: none; }
+      .page {
+        grid-template-columns: 1fr;
+        padding: 18px;
+      }
+      .decision-row { grid-template-columns: 1fr; }
+      .side-panel { position: static; }
+      .chat-shell { min-height: 680px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">AI</div>
+        <div>
+          <div class="brand-title">Leadership Coach</div>
+          <div class="brand-sub">신임 리더용 대화형 코칭</div>
+        </div>
+      </div>
+      <nav class="nav" aria-label="프로토타입 메뉴">
+        <button class="active">챗봇 흐름</button>
+        <button>상황 입력</button>
+        <button>근거 확인</button>
+        <button>실행계획 저장</button>
+      </nav>
+      <div class="side-note">
+        팀 의사결정용 HTML 프로토타입입니다. 실제 API 대신 대화 흐름, 근거 카드, 입력 방식, 저장 경험을 확인하는 데 집중합니다.
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <h1>리더십 AI 코치 챗봇 작동 흐름</h1>
+        <div class="top-actions">
+          <span class="chip ready">HTML 프로토타입</span>
+          <span class="chip">API 미연결</span>
+        </div>
+      </header>
+
+      <section class="page">
+        <div class="main-column">
+          <div class="decision-row" aria-label="상황 예시">
+            <button class="scenario active" data-case="feedback">
+              <strong>성과 피드백이 어렵다</strong>
+              <span>관계가 틀어질까 봐 낮은 성과를 어떻게 말해야 할지 고민</span>
+            </button>
+            <button class="scenario" data-case="delegation">
+              <strong>위임이 잘 안 된다</strong>
+              <span>맡겼는데 결과가 기대와 달라서 다시 내가 하게 되는 상황</span>
+            </button>
+            <button class="scenario" data-case="conflict">
+              <strong>팀원 간 충돌이 있다</strong>
+              <span>두 구성원이 계속 부딪혀 리더가 어디까지 개입할지 고민</span>
+            </button>
+          </div>
+
+          <section class="chat-shell" aria-label="챗봇 시뮬레이션">
+            <div class="chat-head">
+              <div class="chat-title">
+                <strong id="chatTitle">성과 피드백 코칭</strong>
+                <span id="chatSub">챗봇이 상황을 확인한 뒤, 인터뷰 근거와 실행계획을 제안합니다.</span>
+              </div>
+              <div class="stage-pills" aria-label="응답 단계">
+                <span class="active">상황 확인</span>
+                <span>근거 검색</span>
+                <span>코칭 응답</span>
+                <span>실행계획</span>
+              </div>
+            </div>
+
+            <div class="messages" id="messages"></div>
+
+            <form class="composer" id="composer">
+              <textarea id="input" placeholder="예: 팀원이 계속 마감이 늦고 품질도 낮은데, 강하게 말하면 관계가 나빠질까 걱정됩니다."></textarea>
+              <button class="send" aria-label="메시지 보내기">↑</button>
+            </form>
+          </section>
+        </div>
+
+        <aside class="side-panel">
+          <section class="card">
+            <h2>챗봇 처리 흐름</h2>
+            <div class="flow" id="flow">
+              <div class="flow-step active">
+                <div class="num">1</div>
+                <div><strong>상황 받기</strong><span>사용자의 고민을 업무 상황, 관계, 목표로 분리합니다.</span></div>
+              </div>
+              <div class="flow-step">
+                <div class="num">2</div>
+                <div><strong>확인 질문</strong><span>정보가 부족하면 선택형 질문으로 맥락을 좁힙니다.</span></div>
+              </div>
+              <div class="flow-step">
+                <div class="num">3</div>
+                <div><strong>인터뷰 근거 검색</strong><span>유사한 신임 리더 경험을 찾아 답변 근거로 붙입니다.</span></div>
+              </div>
+              <div class="flow-step">
+                <div class="num">4</div>
+                <div><strong>코칭 답변</strong><span>진단, 질문, 대화 문장, 주의점을 짧게 제안합니다.</span></div>
+              </div>
+              <div class="flow-step">
+                <div class="num">5</div>
+                <div><strong>실행계획 저장</strong><span>이번 주 행동 1~3개를 남겨 다음 대화에 이어 씁니다.</span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card decision-card">
+            <h2 style="padding:0">팀에서 결정할 것</h2>
+            <p>1. 좌측 예시를 유지할지</p>
+            <p>2. 답변 근거를 기본 접힘으로 둘지</p>
+            <p>3. 실행계획 저장을 MVP에 넣을지</p>
+            <button class="copy" id="copySummary">의사결정 요약 복사</button>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast">복사되었습니다.</div>
+
+  <script>
+    const scenarios = {
+      feedback: {
+        title: "성과 피드백 코칭",
+        sub: "낮은 성과를 어떻게 말할지 정리하고, 면담 문장까지 제안합니다.",
+        user: "팀원이 계속 마감이 늦고 품질도 낮은데, 강하게 말하면 관계가 나빠질까 걱정됩니다.",
+        question: "먼저 확인할게요. 지금 가장 가까운 목표는 무엇인가요?",
+        choices: ["이번 주 면담 준비", "성과 기준 정리", "관계 훼손 최소화"],
+        answer: "상황 요약\n성과 문제가 반복되고 있지만, 리더는 관계 손상을 우려해 명확한 기준을 말하지 못하고 있습니다.\n\n코칭 질문\n- 기대한 결과와 실제 결과의 차이를 한 문장으로 말하면 무엇인가요?\n- 이 팀원이 바로 바꿔야 할 행동은 하나만 고르면 무엇인가요?\n\n면담 문장 예시\n\"이번 대화는 질책이 아니라, 앞으로 맞춰야 할 기준을 분명히 하기 위한 자리입니다. 최근 두 번의 마감 지연과 산출물 수정이 있었고, 다음 업무부터는 마감 하루 전 초안 공유를 기준으로 맞춰보고 싶습니다.\"\n\n이번 주 실행계획\n1. 최근 사례 2개만 정리한다.\n2. 기대 기준을 행동 문장으로 쓴다.\n3. 면담 마지막에 다음 확인 일정을 잡는다.",
+        ref: ["성과 피드백 인터뷰", "초기 리더 7명", "신임 리더들은 평가보다 기준 합의가 먼저 필요하다고 반복해서 말했다."]
+      },
+      delegation: {
+        title: "위임 설계 코칭",
+        sub: "맡길 일, 확인 주기, 리더가 직접 해야 할 일을 나눕니다.",
+        user: "업무를 맡겼는데 결과가 기대와 달라서 결국 제가 다시 하게 됩니다. 어떻게 위임해야 할까요?",
+        question: "위임이 실패하는 지점은 어디에 더 가깝나요?",
+        choices: ["기준이 불명확함", "중간 확인이 없음", "역량보다 큰 업무"],
+        answer: "상황 요약\n위임 자체보다 위임의 조건이 부족합니다. 결과물 기준, 중간 확인, 실패했을 때의 지원 방식이 먼저 정리되어야 합니다.\n\n코칭 질문\n- 결과물의 완료 기준을 예시로 보여줬나요?\n- 중간 확인 시점은 업무 시작 전에 합의했나요?\n\n실행계획\n1. 업무를 통째로 주지 말고 첫 산출물 단위를 줄인다.\n2. 완료 기준 예시를 먼저 보여준다.\n3. 첫 번째 확인 시점은 24~48시간 안으로 잡는다.",
+        ref: ["첫 위임 경험 인터뷰", "신임 관리자 그룹", "성공한 위임은 권한 이양보다 기대 기준과 확인 주기를 먼저 맞춘 사례가 많았다."]
+      },
+      conflict: {
+        title: "팀 갈등 개입 코칭",
+        sub: "리더가 바로 판정하지 않고 갈등을 업무 기준으로 돌리는 흐름입니다.",
+        user: "두 팀원이 계속 충돌합니다. 제가 누구 편을 들 수도 없고, 어디까지 개입해야 할지 모르겠습니다.",
+        question: "현재 충돌은 어느 쪽에 더 가까운가요?",
+        choices: ["역할 경계 충돌", "커뮤니케이션 방식", "성과 책임 다툼"],
+        answer: "상황 요약\n개인 간 감정처럼 보이지만, 리더는 먼저 업무 기준과 의사결정 기준을 분리해서 봐야 합니다.\n\n코칭 질문\n- 두 사람이 서로 다르게 이해하는 책임 범위는 무엇인가요?\n- 지금 당장 합의해야 할 업무 기준은 무엇인가요?\n\n개입 방식\n1. 각자 따로 사실과 요구를 듣는다.\n2. 공동 면담에서는 성격 평가를 금지하고 업무 기준만 다룬다.\n3. 결정권자, 협의 방식, 이견 발생 시 처리 기준을 문서로 남긴다.",
+        ref: ["팀 내 충돌 조정 인터뷰", "현장 리더 사례", "효과적인 개입은 누가 맞는지 판정하기보다 업무 기준을 다시 세운 경우였다."]
+      }
+    };
+
+    const messages = document.getElementById("messages");
+    const input = document.getElementById("input");
+    const flowSteps = Array.from(document.querySelectorAll(".flow-step"));
+    const stagePills = Array.from(document.querySelectorAll(".stage-pills span"));
+    let current = "feedback";
+    let toastTimer;
+
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function setActiveStep(index) {
+      flowSteps.forEach((step, i) => step.classList.toggle("active", i <= index));
+      stagePills.forEach((pill, i) => pill.classList.toggle("active", i <= Math.min(index, 3)));
+    }
+
+    function addMessage(role, text, options = {}) {
+      const article = document.createElement("article");
+      article.className = `message ${role}`;
+      const avatar = role === "user" ? "나" : "AI";
+      const choices = options.choices ? `
+        <div class="choice-bar">
+          ${options.choices.map(choice => `<button class="choice" type="button">${escapeHtml(choice)}</button>`).join("")}
+        </div>` : "";
+      const reference = options.ref ? `
+        <details class="reference">
+          <summary>참고 인터뷰 근거 보기</summary>
+          <div class="reference-card">
+            <strong>${escapeHtml(options.ref[0])}</strong>
+            <span>${escapeHtml(options.ref[1])}</span>
+            <div>${escapeHtml(options.ref[2])}</div>
+          </div>
+        </details>` : "";
+
+      article.innerHTML = `
+        <div class="avatar">${avatar}</div>
+        <div class="bubble">${escapeHtml(text)}${choices}${reference}</div>`;
+      messages.appendChild(article);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function loadScenario(key) {
+      current = key;
+      const data = scenarios[key];
+      document.getElementById("chatTitle").textContent = data.title;
+      document.getElementById("chatSub").textContent = data.sub;
+      document.querySelectorAll(".scenario").forEach(btn => btn.classList.toggle("active", btn.dataset.case === key));
+      messages.innerHTML = "";
+      setActiveStep(1);
+      addMessage("assistant", "안녕하세요. 지금 겪는 리더십 상황을 한두 문장으로 적어주세요. 먼저 상황을 좁힌 뒤, 유사 인터뷰 근거를 찾아 실행 가능한 코칭으로 정리하겠습니다.");
+      addMessage("user", data.user);
+      addMessage("assistant", data.question, { choices: data.choices });
+      input.value = "";
+    }
+
+    function answerWithCoach(extraText) {
+      const data = scenarios[current];
+      if (extraText.trim()) addMessage("user", extraText.trim());
+      setActiveStep(4);
+      addMessage("assistant", data.answer, { ref: data.ref });
+    }
+
+    document.querySelectorAll(".scenario").forEach(btn => {
+      btn.addEventListener("click", () => loadScenario(btn.dataset.case));
+    });
+
+    messages.addEventListener("click", event => {
+      const choice = event.target.closest(".choice");
+      if (!choice) return;
+      answerWithCoach(choice.textContent);
+    });
+
+    document.getElementById("composer").addEventListener("submit", event => {
+      event.preventDefault();
+      if (!input.value.trim()) return;
+      answerWithCoach(input.value);
+      input.value = "";
+    });
+
+    document.getElementById("copySummary").addEventListener("click", async () => {
+      const text = [
+        "리더십 AI 코치 챗봇 의사결정 요약",
+        "- 메인 화면은 좌측 예시 + 중앙 채팅 + 우측 처리 흐름으로 구성",
+        "- 챗봇은 상황 입력 > 확인 질문 > 인터뷰 근거 검색 > 코칭 응답 > 실행계획 저장 순서",
+        "- 참고 인터뷰는 답변 아래 접힌 카드로 제공",
+        "- MVP는 실제 채팅 경험과 답변 신뢰도 확인에 집중"
+      ].join("\\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("의사결정 요약을 복사했습니다.");
+      } catch {
+        showToast("브라우저 권한 때문에 복사하지 못했습니다.");
+      }
+    });
+
+    function showToast(text) {
+      const toast = document.getElementById("toast");
+      toast.textContent = text;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    loadScenario("feedback");
+  </script>
+</body>
+</html>
