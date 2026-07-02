@@ -1,778 +1,702 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>리더십 AI 코치 챗봇 흐름 프로토타입</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>리더십 코칭 챗봇 · 의사결정용 프로토타입</title>
   <style>
-    :root {
-      --navy: #0f2438;
-      --navy-2: #173552;
-      --teal: #0f766e;
-      --teal-2: #0b5f59;
-      --teal-soft: #e4f4f1;
-      --amber: #b7791f;
-      --amber-soft: #fff3dc;
-      --blue: #2563eb;
-      --blue-soft: #eaf1ff;
-      --bg: #f5f7f8;
-      --panel: #ffffff;
-      --line: #dce3e8;
-      --text: #17212b;
-      --muted: #667280;
-      --soft: #f8fafb;
-      --shadow: 0 18px 50px rgba(15, 36, 56, .10);
+    :root{
+      --cobalt:#329BE7;
+      --cobalt-hover:#327AB8;
+      --cobalt-10:#329BE71A;
+      --cobalt-20:#329BE733;
+      --cobalt-30:#329BE74D;
+      --canvas:#FFFFFF;
+      --surface:#FCFCFC;
+      --canvas-tint:#F7F7F8;
+      --hairline:#EFEFF0;
+      --foreground:#313234;
+      --body:#464748;
+      --muted:#7B7C80;
+      --muted-light:#A7A7AA;
+      --dark:#242428;
+      --black-85:rgba(0,0,0,.85);
+      --black-60:rgba(0,0,0,.60);
+      --black-30:rgba(0,0,0,.30);
+      --black-08:rgba(0,0,0,.08);
+      --black-05:rgba(0,0,0,.05);
+      --black-03:rgba(0,0,0,.03);
+      --success:#31A552;
+      --success-10:#31A5521A;
+      --caution:#EDBC40;
+      --caution-20:#EDBC4033;
+      --error:#E94E58;
+      --radius-input:8px;
+      --radius-card:20px;
+      --radius-dialog:20px;
+      --ease:cubic-bezier(.3,0,0,1);
+      --sidebar:224px;
     }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      color: var(--text);
-      background: var(--bg);
-      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      background:var(--canvas-tint);
+      color:var(--black-85);
+      font-family:Inter,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+      font-size:15px;
+      line-height:1.5;
+      letter-spacing:-.1px;
     }
+    button,textarea{font:inherit}
+    button{cursor:pointer}
+    button:focus-visible,textarea:focus-visible{outline:3px solid var(--cobalt-30);outline-offset:2px}
+    button:disabled{cursor:not-allowed;opacity:.4}
+    svg{display:block;stroke:currentColor}
 
-    button, textarea { font: inherit; }
-    button { cursor: pointer; }
-
-    .app {
-      display: grid;
-      grid-template-columns: 240px minmax(0, 1fr);
-      min-height: 100vh;
+    .app{min-height:100vh;display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr)}
+    .sidebar{
+      position:fixed;inset:0 auto 0 0;width:var(--sidebar);z-index:20;
+      display:flex;flex-direction:column;padding:24px 16px;
+      background:var(--canvas);border-right:1px solid var(--hairline)
     }
-
-    .sidebar {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      padding: 28px 18px;
-      background: var(--navy);
-      color: #fff;
+    .brand{display:flex;align-items:center;gap:11px;padding:4px 8px}
+    .brand-mark{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--cobalt);color:#fff}
+    .brand-title{font-size:15px;line-height:20px;font-weight:700;letter-spacing:-.1px}
+    .brand-sub{font-size:12px;line-height:16px;color:var(--black-60)}
+    .nav{display:grid;gap:4px;margin-top:32px}
+    .nav-item{
+      display:flex;align-items:center;gap:10px;width:100%;height:42px;padding:0 12px;
+      border:0;border-radius:8px;background:transparent;color:var(--black-60);text-align:left
     }
-
-    .brand {
-      display: flex;
-      gap: 12px;
-      align-items: center;
+    .nav-item svg{width:18px;height:18px;stroke-width:1.8}
+    .nav-item.active{background:var(--cobalt-10);color:var(--cobalt);font-weight:700}
+    .nav-item[aria-disabled="true"]{opacity:.45;cursor:default}
+    .sidebar-note{
+      margin-top:auto;padding:14px;border-radius:12px;background:var(--canvas-tint);
+      color:var(--black-60);font-size:12px;line-height:18px
     }
+    .sidebar-note strong{display:block;margin-bottom:5px;color:var(--black-85);font-size:13px}
 
-    .brand-mark {
-      display: grid;
-      width: 42px;
-      height: 42px;
-      place-items: center;
-      border-radius: 10px;
-      background: var(--teal);
-      font-weight: 900;
+    .workspace{grid-column:2;min-width:0}
+    .topbar{
+      position:sticky;top:0;z-index:15;height:72px;display:flex;align-items:center;justify-content:space-between;
+      padding:0 32px;background:rgba(255,255,255,.96);border-bottom:1px solid var(--hairline);backdrop-filter:blur(12px)
     }
-
-    .brand-title { font-size: 17px; font-weight: 850; }
-    .brand-sub { margin-top: 4px; color: #b9c8d8; font-size: 12px; }
-
-    .nav {
-      display: grid;
-      gap: 10px;
-      margin-top: 38px;
+    .topbar-left{display:flex;align-items:center;gap:10px}
+    .topbar-title{font-size:18px;line-height:24px;font-weight:700}
+    .prototype-badge{padding:5px 8px;border-radius:8px;background:var(--canvas-tint);color:var(--black-60);font-size:11px;font-weight:700}
+    .topbar-actions{display:flex;align-items:center;gap:10px}
+    .review-toggle{
+      display:flex;align-items:center;gap:9px;height:38px;padding:0 10px 0 12px;
+      border:1px solid var(--hairline);border-radius:8px;background:#fff;color:var(--black-60);font-size:12px
     }
+    .switch{width:34px;height:20px;padding:2px;border:0;border-radius:9999px;background:var(--muted-light);transition:background 150ms var(--ease)}
+    .switch::after{content:"";display:block;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 150ms var(--ease)}
+    .switch.on{background:var(--cobalt)}
+    .switch.on::after{transform:translateX(14px)}
+    .avatar{width:34px;height:34px;border-radius:42%;display:grid;place-items:center;background:var(--dark);color:#fff;font-size:11px;font-weight:700}
 
-    .nav button {
-      border: 0;
-      border-radius: 10px;
-      padding: 12px 14px;
-      background: transparent;
-      color: #c8d5e3;
-      text-align: left;
-      font-size: 14px;
+    .case-bar{max-width:1312px;margin:0 auto;padding:20px 32px 0}
+    .case-tabs{display:flex;gap:4px;padding:4px;border:1px solid var(--hairline);border-radius:12px;background:var(--surface);overflow-x:auto}
+    .case-tab{
+      flex:1;min-width:180px;height:42px;padding:0 14px;border:0;border-radius:8px;background:transparent;
+      color:var(--black-60);font-size:13px;font-weight:400;white-space:nowrap;transition:background 150ms var(--ease),color 150ms var(--ease)
     }
+    .case-tab:hover{background:var(--black-03);color:var(--black-85)}
+    .case-tab.active{background:#fff;color:var(--black-85);font-weight:700;box-shadow:0 0 0 1px var(--black-05)}
+    .case-tab.active::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:var(--cobalt);vertical-align:1px}
 
-    .nav button.active {
-      background: var(--navy-2);
-      color: #fff;
-      font-weight: 800;
+    .page{max-width:1312px;margin:0 auto;padding:22px 32px 48px}
+    .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:18px}
+    .eyebrow{display:flex;align-items:center;gap:7px;margin-bottom:6px;color:var(--cobalt);font-size:12px;font-weight:700}
+    .page-title{margin:0;font-size:24px;line-height:32px;font-weight:700;letter-spacing:-.4px}
+    .page-sub{max-width:760px;margin:6px 0 0;color:var(--black-60);font-size:14px;line-height:20px}
+    .page-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+    .button{
+      display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 14px;
+      border:1px solid var(--hairline);border-radius:8px;background:#fff;color:var(--black-85);font-size:13px;font-weight:700;
+      transition:background 150ms var(--ease),border-color 150ms var(--ease),color 150ms var(--ease)
     }
+    .button svg{width:17px;height:17px;stroke-width:1.8}
+    .button:hover{background:var(--canvas-tint)}
+    .button.primary{border-color:var(--cobalt);background:var(--cobalt);color:#fff}
+    .button.primary:hover{border-color:var(--cobalt-hover);background:var(--cobalt-hover)}
+    .button.ghost{border-color:transparent;background:transparent;color:var(--black-60)}
+    .button.ghost:hover{background:var(--black-05);color:var(--black-85)}
 
-    .side-note {
-      position: absolute;
-      right: 18px;
-      bottom: 24px;
-      left: 18px;
-      padding: 14px;
-      border: 1px solid rgba(255,255,255,.13);
-      border-radius: 12px;
-      color: #bdd0df;
-      font-size: 12px;
-      line-height: 1.55;
+    .page-grid{display:grid;grid-template-columns:minmax(0,1fr) 326px;gap:20px;align-items:start}
+    .card{border:1px solid var(--hairline);border-radius:var(--radius-card);background:var(--canvas)}
+    .chat-shell{height:calc(100vh - 222px);min-height:700px;max-height:860px;display:grid;grid-template-rows:64px minmax(0,1fr) auto;overflow:hidden}
+    .chat-header{display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--hairline)}
+    .chat-title{display:flex;align-items:center;gap:11px}
+    .bot-avatar,.mini-avatar{display:grid;place-items:center;background:var(--cobalt);color:#fff;font-weight:700}
+    .bot-avatar{width:36px;height:36px;border-radius:42%;font-size:11px}
+    .mini-avatar{flex:0 0 30px;width:30px;height:30px;border-radius:42%;font-size:9px}
+    .chat-name{font-size:14px;font-weight:700}
+    .chat-status{display:flex;align-items:center;gap:5px;margin-top:2px;color:var(--black-60);font-size:11px}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--success)}
+    .chat-header-actions{display:flex;align-items:center;gap:4px}
+    .icon-button{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--black-60)}
+    .icon-button:hover{background:var(--black-05);color:var(--black-85)}
+    .icon-button svg{width:18px;height:18px;stroke-width:1.8}
+
+    .chat-log{overflow:auto;padding:22px;background:var(--canvas-tint);scroll-behavior:smooth}
+    .empty-state{min-height:100%;display:grid;place-items:center;padding:32px}
+    .empty-inner{max-width:560px;text-align:center}
+    .empty-icon{width:52px;height:52px;margin:0 auto 18px;border-radius:16px;display:grid;place-items:center;background:var(--cobalt-10);color:var(--cobalt)}
+    .empty-icon svg{width:26px;height:26px;stroke-width:1.7}
+    .empty-title{margin:0;font-size:22px;line-height:28px;font-weight:700;letter-spacing:-.4px}
+    .empty-text{margin:8px 0 18px;color:var(--black-60);font-size:14px;line-height:21px}
+    .example-question{
+      width:100%;padding:14px 16px;border:1px solid var(--hairline);border-radius:12px;background:#fff;color:var(--black-85);text-align:left;
+      font-size:13px;line-height:19px;transition:border-color 150ms var(--ease),background 150ms var(--ease)
     }
+    .example-question:hover{border-color:var(--cobalt);background:var(--cobalt-10)}
+    .example-label{display:block;margin-bottom:5px;color:var(--cobalt);font-size:11px;font-weight:700}
 
-    .workspace {
-      min-width: 0;
+    .message-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:16px}
+    .message-row.user{justify-content:flex-end}
+    .message-group{max-width:min(78%,690px)}
+    .bubble{padding:12px 14px;border-radius:16px;font-size:14px;line-height:21px;white-space:normal}
+    .user .bubble{border-bottom-right-radius:6px;background:var(--cobalt);color:#fff}
+    .bot .bubble{border:1px solid var(--hairline);border-bottom-left-radius:6px;background:#fff;color:var(--black-85)}
+    .message-meta{margin-top:4px;color:var(--muted-light);font-size:10px}
+    .user .message-meta{text-align:right}
+    .context-lead{display:block;margin-bottom:7px;color:var(--cobalt);font-size:12px;font-weight:700}
+    .empathy-lead{display:flex;align-items:center;gap:7px;margin-bottom:7px;color:var(--black-60);font-size:12px;font-weight:700}
+    .empathy-lead::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--cobalt)}
+    .message-row,.summary-card,.senior-card,.action-card,.quick-replies{animation:messageIn 300ms var(--ease) both}
+    @keyframes messageIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+
+    .quick-replies{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 16px 40px}
+    .quick{
+      min-height:36px;padding:7px 11px;border:1px solid var(--hairline);border-radius:8px;background:#fff;color:var(--black-85);font-size:12px;
+      transition:background 150ms var(--ease),border-color 150ms var(--ease),color 150ms var(--ease)
     }
+    .quick:hover{border-color:var(--cobalt);background:var(--cobalt-10);color:var(--cobalt)}
+    .quick:disabled{background:var(--surface)}
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 3;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      height: 68px;
-      padding: 0 30px;
-      border-bottom: 1px solid var(--line);
-      background: rgba(255,255,255,.94);
-      backdrop-filter: blur(10px);
+    .typing{display:flex;gap:4px;align-items:center;height:18px}
+    .typing span{width:5px;height:5px;border-radius:50%;background:var(--muted-light);animation:typing 1.1s infinite}
+    .typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+    @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+
+    .summary-card,.senior-card,.action-card{margin:0 0 16px 40px;border:1px solid var(--hairline);border-radius:20px;background:#fff;overflow:hidden}
+    .summary-card{padding:16px}
+    .summary-title{display:flex;align-items:center;gap:8px;margin-bottom:11px;font-size:14px;font-weight:700}
+    .summary-title svg{width:18px;height:18px;color:var(--cobalt);stroke-width:1.8}
+    .summary-headline{margin:0 0 10px;font-size:16px;line-height:23px;font-weight:700}
+    .summary-list{display:grid;gap:7px;margin:0;padding:0;list-style:none}
+    .summary-list li{display:grid;grid-template-columns:90px 1fr;gap:10px;font-size:12px;line-height:18px}
+    .summary-list b{color:var(--black-60);font-weight:400}
+
+    .senior-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid var(--hairline);background:var(--surface)}
+    .senior-heading{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700}
+    .senior-heading svg{width:19px;height:19px;color:var(--cobalt);stroke-width:1.8}
+    .source-badge{padding:5px 8px;border-radius:8px;background:var(--cobalt-10);color:var(--cobalt);font-size:10px;font-weight:700;white-space:nowrap}
+    .senior-body{padding:16px}
+    .match-reason{padding:11px 12px;border-radius:8px;background:var(--cobalt-10);font-size:12px;line-height:18px}
+    .match-reason strong{color:var(--cobalt)}
+    .senior-profile{display:flex;align-items:center;gap:9px;margin-top:15px;color:var(--black-60);font-size:12px}
+    .profile-mark{width:28px;height:28px;border-radius:42%;display:grid;place-items:center;background:var(--dark);color:#fff;font-size:9px;font-weight:700}
+    .experience-label{margin-top:14px;color:var(--black-60);font-size:11px;font-weight:700}
+    .experience-text{margin:5px 0 0;font-size:15px;line-height:23px;font-weight:700}
+    .senior-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+    .insight-box{padding:12px;border:1px solid var(--hairline);border-radius:12px;background:var(--surface)}
+    .insight-box b{display:block;margin-bottom:5px;font-size:11px;color:var(--black-60)}
+    .insight-box span{font-size:12px;line-height:18px}
+    .senior-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+
+    .action-card{padding:16px}
+    .action-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .action-title{margin:0;font-size:16px;line-height:23px;font-weight:700}
+    .action-kicker{margin-top:3px;color:var(--black-60);font-size:12px}
+    .action-step{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 0}
+    .action-step+.action-step{border-top:1px solid var(--hairline)}
+    .action-num{width:28px;height:28px;border-radius:42%;display:grid;place-items:center;background:var(--dark);color:#fff;font-size:11px;font-weight:700}
+    .action-step:first-of-type .action-num{background:var(--cobalt)}
+    .action-step strong{font-size:13px;line-height:18px}
+    .action-step p{margin:3px 0 0;color:var(--black-60);font-size:12px;line-height:18px}
+    .guardrail{display:flex;gap:9px;margin-top:10px;padding:11px 12px;border-radius:8px;background:var(--caution-20);font-size:12px;line-height:18px}
+    .guardrail svg{flex:0 0 17px;width:17px;height:17px;margin-top:1px;color:#8A6500;stroke-width:1.8}
+    .result-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+
+    .composer{padding:14px 16px;border-top:1px solid var(--hairline);background:#fff}
+    .composer-context{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;color:var(--black-60);font-size:11px}
+    .composer-row{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:8px}
+    .composer textarea{
+      width:100%;height:54px;resize:none;padding:9px 12px;border:1px solid var(--black-05);border-radius:8px;background:#fff;
+      color:var(--black-85);font-size:14px;line-height:20px;outline:none
     }
+    .composer textarea::placeholder{color:var(--muted-light)}
+    .composer textarea:focus{border-color:var(--cobalt);box-shadow:0 0 0 3px var(--cobalt-30)}
+    .send{width:42px;height:42px;align-self:center;display:grid;place-items:center;border:0;border-radius:8px;background:var(--cobalt);color:#fff}
+    .send:hover{background:var(--cobalt-hover)}
+    .send svg{width:19px;height:19px;stroke-width:1.9}
 
-    .topbar h1 {
-      margin: 0;
-      font-size: 19px;
+    .decision-panel{position:sticky;top:92px;max-height:calc(100vh - 112px);overflow:auto;padding:18px}
+    .decision-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+    .decision-title{font-size:15px;font-weight:700}
+    .decision-badge{padding:5px 7px;border-radius:8px;background:var(--canvas-tint);color:var(--black-60);font-size:10px;font-weight:700}
+    .decision-desc{margin:0 0 16px;color:var(--black-60);font-size:11px;line-height:17px}
+    .stepper{display:grid;gap:0;margin-bottom:16px}
+    .step{display:grid;grid-template-columns:24px 1fr;gap:9px;min-height:48px;position:relative}
+    .step:not(:last-child)::after{content:"";position:absolute;left:11px;top:25px;bottom:0;width:1px;background:var(--hairline)}
+    .step-dot{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--hairline);background:#fff;color:var(--muted-light);font-size:10px;font-weight:700;z-index:1}
+    .step.active .step-dot{border-color:var(--cobalt);background:var(--cobalt);color:#fff}
+    .step.done .step-dot{border-color:var(--cobalt);background:var(--cobalt-10);color:var(--cobalt)}
+    .step-name{padding-top:2px;font-size:12px;font-weight:700}
+    .step-note{margin-top:2px;color:var(--black-60);font-size:10px;line-height:15px}
+    .decision-section{padding:14px 0;border-top:1px solid var(--hairline)}
+    .decision-section h3{margin:0 0 9px;font-size:12px;font-weight:700}
+    .fact-list{display:grid;gap:7px;margin:0;padding:0;list-style:none}
+    .fact-list li{padding:9px 10px;border-radius:8px;background:var(--surface);font-size:11px;line-height:17px}
+    .fact-list b{display:block;margin-bottom:2px;color:var(--black-60);font-weight:400}
+    .empty-fact{color:var(--muted-light)}
+    .prototype-list{display:grid;gap:7px}
+    .prototype-row{display:flex;align-items:flex-start;gap:8px;font-size:11px;line-height:17px}
+    .prototype-row svg{flex:0 0 15px;width:15px;height:15px;margin-top:1px;color:var(--cobalt);stroke-width:2}
+    .current-choice{display:grid;gap:7px}
+    .choice-row{display:grid;grid-template-columns:86px 1fr;gap:8px;font-size:11px;line-height:17px}
+    .choice-row b{color:var(--black-60);font-weight:400}
+    .prototype-warning{display:flex;gap:8px;margin-top:12px;padding:10px;border-radius:8px;background:var(--caution-20);font-size:10px;line-height:16px}
+    .prototype-warning svg{flex:0 0 15px;width:15px;height:15px;margin-top:1px;color:#8A6500;stroke-width:1.8}
+    body.review-off .page-grid{grid-template-columns:minmax(0,980px);justify-content:center}
+    body.review-off .decision-panel{display:none}
+
+    .modal-backdrop{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:24px;background:var(--black-30)}
+    .modal-backdrop.open{display:flex}
+    .modal{width:min(760px,100%);max-height:86vh;overflow:auto;border:1px solid var(--black-08);border-radius:var(--radius-dialog);background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+    .modal-head{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--hairline);background:#fff;z-index:1}
+    .modal-title{margin:0;font-size:18px;line-height:24px;font-weight:700}
+    .modal-close{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--black-60)}
+    .modal-close:hover{background:var(--black-05)}
+    .modal-close svg{width:19px;height:19px;stroke-width:1.8}
+    .modal-body{padding:20px}
+    .modal-body h4{margin:20px 0 8px;font-size:14px}.modal-body h4:first-child{margin-top:0}
+    .modal-body p,.modal-body li{font-size:13px;line-height:20px}
+    .modal-body table{width:100%;border-collapse:collapse;margin-top:12px}
+    .modal-body th,.modal-body td{padding:10px;border:1px solid var(--hairline);text-align:left;font-size:12px;line-height:18px;vertical-align:top}
+    .modal-body th{background:var(--surface);font-weight:700}
+    .copy-box{padding:14px;border-radius:8px;background:var(--canvas-tint);white-space:pre-wrap;font-size:13px;line-height:21px}
+    .prototype-note{padding:12px;border-radius:8px;background:var(--cobalt-10);font-size:12px;line-height:18px}
+
+    .toast{position:fixed;left:50%;bottom:24px;z-index:120;transform:translate(-50%,12px);padding:10px 14px;border-radius:8px;background:var(--dark);color:#fff;font-size:12px;opacity:0;pointer-events:none;transition:opacity 150ms var(--ease),transform 150ms var(--ease)}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+
+    @media(max-width:1180px){
+      :root{--sidebar:76px}
+      .sidebar{padding:20px 10px}.brand{justify-content:center}.brand-copy,.nav-item span,.sidebar-note{display:none}.nav-item{justify-content:center;padding:0}.workspace{grid-column:2}
+      .page-grid{grid-template-columns:minmax(0,1fr) 300px}.page,.case-bar{padding-left:22px;padding-right:22px}
     }
-
-    .top-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
+    @media(max-width:920px){
+      .app{display:block}.sidebar{position:static;width:100%;height:64px;display:flex;flex-direction:row;align-items:center;padding:8px 14px;border-right:0;border-bottom:1px solid var(--hairline)}
+      .brand{justify-content:flex-start}.brand-copy{display:block}.nav{display:none}.workspace{grid-column:auto}.topbar{top:0;height:60px;padding:0 18px}.page,.case-bar{padding-left:16px;padding-right:16px}.page-grid{grid-template-columns:1fr}.decision-panel{position:static;max-height:none}.chat-shell{height:760px;min-height:640px}.page-head{align-items:flex-start;flex-direction:column}.page-actions{width:100%;justify-content:flex-end}
+      body.review-off .page-grid{display:block}.review-toggle span{display:none}
     }
-
-    .chip {
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 8px 11px;
-      background: #fff;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 750;
+    @media(max-width:620px){
+      .topbar-title{font-size:16px}.prototype-badge{display:none}.case-bar{padding-top:12px}.case-tabs{overflow-x:auto}.case-tab{flex:0 0 auto;min-width:158px}.page{padding-top:16px}.page-title{font-size:22px;line-height:28px}.page-actions{justify-content:stretch}.page-actions .button{flex:1}.chat-shell{height:720px;border-radius:12px}.chat-log{padding:16px 12px}.message-group{max-width:86%}.quick-replies,.summary-card,.senior-card,.action-card{margin-left:0}.senior-grid{grid-template-columns:1fr}.summary-list li{grid-template-columns:72px 1fr}.review-toggle{padding-left:8px}.avatar{display:none}
     }
-
-    .chip.ready {
-      border-color: #bfe4dc;
-      background: var(--teal-soft);
-      color: var(--teal-2);
-    }
-
-    .page {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 330px;
-      gap: 22px;
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 26px 28px 42px;
-    }
-
-    .main-column {
-      display: grid;
-      gap: 16px;
-      min-width: 0;
-    }
-
-    .decision-row {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .scenario {
-      min-height: 94px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 14px;
-      background: var(--panel);
-      text-align: left;
-      box-shadow: 0 2px 10px rgba(15,36,56,.03);
-    }
-
-    .scenario.active {
-      border-color: var(--teal);
-      background: var(--teal-soft);
-    }
-
-    .scenario strong {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-
-    .scenario span {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .chat-shell {
-      display: grid;
-      grid-template-rows: auto minmax(430px, 1fr) auto;
-      min-height: calc(100vh - 220px);
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-    }
-
-    .chat-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 16px 18px;
-      border-bottom: 1px solid var(--line);
-      background: var(--soft);
-    }
-
-    .chat-title {
-      display: grid;
-      gap: 4px;
-    }
-
-    .chat-title strong { font-size: 16px; }
-    .chat-title span { color: var(--muted); font-size: 12px; }
-
-    .stage-pills {
-      display: flex;
-      gap: 7px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .stage-pills span {
-      border-radius: 999px;
-      padding: 6px 9px;
-      background: #eef2f5;
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 800;
-    }
-
-    .stage-pills span.active {
-      background: var(--blue-soft);
-      color: var(--blue);
-    }
-
-    .messages {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      overflow: auto;
-      padding: 22px;
-    }
-
-    .message {
-      display: grid;
-      grid-template-columns: 34px minmax(0, 720px);
-      gap: 11px;
-      align-items: start;
-    }
-
-    .message.user {
-      justify-content: end;
-      grid-template-columns: minmax(0, 620px) 34px;
-    }
-
-    .avatar {
-      display: grid;
-      width: 34px;
-      height: 34px;
-      place-items: center;
-      border-radius: 9px;
-      background: var(--teal);
-      color: #fff;
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .message.user .avatar {
-      grid-column: 2;
-      background: var(--amber);
-    }
-
-    .bubble {
-      border: 1px solid var(--line);
-      border-radius: 11px;
-      padding: 14px 15px;
-      background: #fff;
-      line-height: 1.65;
-      white-space: pre-wrap;
-      word-break: keep-all;
-      overflow-wrap: anywhere;
-      font-size: 14px;
-    }
-
-    .message.user .bubble {
-      grid-column: 1;
-      grid-row: 1;
-      background: var(--amber-soft);
-    }
-
-    .choice-bar {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-
-    .choice {
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 8px 11px;
-      background: #fff;
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 750;
-    }
-
-    .choice:hover {
-      border-color: var(--teal);
-      color: var(--teal-2);
-    }
-
-    details.reference {
-      margin-top: 13px;
-      border-top: 1px solid var(--line);
-      padding-top: 12px;
-    }
-
-    details.reference summary {
-      color: var(--teal-2);
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 850;
-    }
-
-    .reference-card {
-      display: grid;
-      gap: 6px;
-      margin-top: 10px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 11px;
-      background: var(--soft);
-      font-size: 12px;
-      line-height: 1.55;
-    }
-
-    .reference-card strong { font-size: 13px; }
-    .reference-card span { color: var(--muted); }
-
-    .composer {
-      display: grid;
-      grid-template-columns: 1fr 46px;
-      gap: 10px;
-      padding: 16px;
-      border-top: 1px solid var(--line);
-      background: var(--soft);
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 72px;
-      max-height: 150px;
-      resize: vertical;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 13px;
-      outline: none;
-      line-height: 1.5;
-    }
-
-    textarea:focus {
-      border-color: var(--teal);
-      box-shadow: 0 0 0 3px rgba(15, 118, 110, .12);
-    }
-
-    .send {
-      align-self: end;
-      width: 46px;
-      height: 46px;
-      border: 0;
-      border-radius: 10px;
-      background: var(--teal);
-      color: #fff;
-      font-size: 20px;
-      font-weight: 900;
-    }
-
-    .side-panel {
-      position: sticky;
-      top: 92px;
-      display: grid;
-      gap: 14px;
-      align-self: start;
-    }
-
-    .card {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: var(--panel);
-      box-shadow: 0 2px 10px rgba(15,36,56,.03);
-    }
-
-    .card h2 {
-      margin: 0;
-      padding: 16px 16px 0;
-      font-size: 16px;
-    }
-
-    .flow {
-      display: grid;
-      gap: 0;
-      padding: 8px 16px 16px;
-    }
-
-    .flow-step {
-      display: grid;
-      grid-template-columns: 28px 1fr;
-      gap: 10px;
-      padding: 12px 0;
-      border-bottom: 1px solid #edf1f4;
-    }
-
-    .flow-step:last-child { border-bottom: 0; }
-
-    .num {
-      display: grid;
-      width: 28px;
-      height: 28px;
-      place-items: center;
-      border-radius: 50%;
-      background: #e7edf2;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .flow-step.active .num {
-      background: var(--teal);
-      color: #fff;
-    }
-
-    .flow-step strong {
-      display: block;
-      font-size: 13px;
-    }
-
-    .flow-step span {
-      display: block;
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .decision-card {
-      padding: 16px;
-    }
-
-    .decision-card p {
-      margin: 8px 0 0;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.55;
-    }
-
-    .copy {
-      width: 100%;
-      margin-top: 13px;
-      border: 0;
-      border-radius: 10px;
-      padding: 11px 12px;
-      background: var(--navy);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 24px;
-      transform: translate(-50%, 12px);
-      padding: 10px 15px;
-      border-radius: 999px;
-      background: var(--navy);
-      color: #fff;
-      opacity: 0;
-      pointer-events: none;
-      transition: .2s;
-      font-size: 13px;
-      z-index: 10;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translate(-50%, 0);
-    }
-
-    @media (max-width: 980px) {
-      .app { grid-template-columns: 1fr; }
-      .sidebar {
-        position: static;
-        height: auto;
-        padding: 18px;
-      }
-      .nav, .side-note { display: none; }
-      .page {
-        grid-template-columns: 1fr;
-        padding: 18px;
-      }
-      .decision-row { grid-template-columns: 1fr; }
-      .side-panel { position: static; }
-      .chat-shell { min-height: 680px; }
-    }
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
   </style>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark">AI</div>
-        <div>
-          <div class="brand-title">Leadership Coach</div>
-          <div class="brand-sub">신임 리더용 대화형 코칭</div>
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 5.5h14v10H9l-4 3v-13Z" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 9h8M8 12h5" stroke-width="1.8" stroke-linecap="round"/></svg>
         </div>
+        <div class="brand-copy"><div class="brand-title">Leadership AI</div><div class="brand-sub">현장 리더 코칭</div></div>
       </div>
-      <nav class="nav" aria-label="프로토타입 메뉴">
-        <button class="active">챗봇 흐름</button>
-        <button>상황 입력</button>
-        <button>근거 확인</button>
-        <button>실행계획 저장</button>
+      <nav class="nav" aria-label="주요 메뉴">
+        <button class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg><span>새로운 고민</span></button>
+        <button class="nav-item" aria-disabled="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg><span>대화 기록</span></button>
+        <button class="nav-item" aria-disabled="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12v18l-6-4-6 4Z"/></svg><span>실행계획</span></button>
+        <button class="nav-item" aria-disabled="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.5 2.5 0 1 1 3.6 2.2c-.9.5-1.4 1-1.4 2M12 17h.01"/></svg><span>도움말</span></button>
       </nav>
-      <div class="side-note">
-        팀 의사결정용 HTML 프로토타입입니다. 실제 API 대신 대화 흐름, 근거 카드, 입력 방식, 저장 경험을 확인하는 데 집중합니다.
-      </div>
+      <div class="sidebar-note"><strong>의사결정용 화면</strong>사용자 대화와 우측 설계 정보를 함께 보며 확인 질문, 선배 조언, 실행안의 노출 방식을 검토합니다.</div>
     </aside>
 
     <main class="workspace">
       <header class="topbar">
-        <h1>리더십 AI 코치 챗봇 작동 흐름</h1>
-        <div class="top-actions">
-          <span class="chip ready">HTML 프로토타입</span>
-          <span class="chip">API 미연결</span>
+        <div class="topbar-left"><div class="topbar-title">리더십 코칭</div><span class="prototype-badge">UX 의사결정용</span></div>
+        <div class="topbar-actions">
+          <div class="review-toggle"><span>의사결정 정보</span><button class="switch on" id="reviewSwitch" aria-label="의사결정 정보 표시 전환" aria-pressed="true"></button></div>
+          <span class="avatar">PS</span>
         </div>
       </header>
 
+      <div class="case-bar">
+        <div class="case-tabs" role="tablist" aria-label="검토 케이스">
+          <button class="case-tab active" data-case="case1" role="tab" aria-selected="true">CASE 1 · 개별 면담</button>
+          <button class="case-tab" data-case="case2" role="tab" aria-selected="false">CASE 2 · 업무 배분</button>
+          <button class="case-tab" data-case="case3" role="tab" aria-selected="false">CASE 3 · 성과 압박</button>
+        </div>
+      </div>
+
       <section class="page">
-        <div class="main-column">
-          <div class="decision-row" aria-label="상황 예시">
-            <button class="scenario active" data-case="feedback">
-              <strong>성과 피드백이 어렵다</strong>
-              <span>관계가 틀어질까 봐 낮은 성과를 어떻게 말해야 할지 고민</span>
-            </button>
-            <button class="scenario" data-case="delegation">
-              <strong>위임이 잘 안 된다</strong>
-              <span>맡겼는데 결과가 기대와 달라서 다시 내가 하게 되는 상황</span>
-            </button>
-            <button class="scenario" data-case="conflict">
-              <strong>팀원 간 충돌이 있다</strong>
-              <span>두 구성원이 계속 부딪혀 리더가 어디까지 개입할지 고민</span>
-            </button>
+        <div class="page-head">
+          <div>
+            <div class="eyebrow"><span id="caseNumber">CASE 1</span><span>·</span><span id="caseType">맞춤 가이드형</span></div>
+            <h1 class="page-title" id="pageTitle">개별 면담을 앞둔 리더</h1>
+            <p class="page-sub" id="pageSub">바로 쓸 수 있는 기본 방향을 먼저 안내하고, 필요한 맥락만 확인한 뒤 선배 경험과 실행안을 제안합니다.</p>
           </div>
-
-          <section class="chat-shell" aria-label="챗봇 시뮬레이션">
-            <div class="chat-head">
-              <div class="chat-title">
-                <strong id="chatTitle">성과 피드백 코칭</strong>
-                <span id="chatSub">챗봇이 상황을 확인한 뒤, 인터뷰 근거와 실행계획을 제안합니다.</span>
-              </div>
-              <div class="stage-pills" aria-label="응답 단계">
-                <span class="active">상황 확인</span>
-                <span>근거 검색</span>
-                <span>코칭 응답</span>
-                <span>실행계획</span>
-              </div>
-            </div>
-
-            <div class="messages" id="messages"></div>
-
-            <form class="composer" id="composer">
-              <textarea id="input" placeholder="예: 팀원이 계속 마감이 늦고 품질도 낮은데, 강하게 말하면 관계가 나빠질까 걱정됩니다."></textarea>
-              <button class="send" aria-label="메시지 보내기">↑</button>
-            </form>
-          </section>
+          <div class="page-actions">
+            <button class="button" id="resetButton"><svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>초기화</button>
+            <button class="button primary" id="demoButton"><svg viewBox="0 0 24 24" fill="none"><path d="m5 3 14 9-14 9Z"/></svg>전체 흐름 보기</button>
+          </div>
         </div>
 
-        <aside class="side-panel">
-          <section class="card">
-            <h2>챗봇 처리 흐름</h2>
-            <div class="flow" id="flow">
-              <div class="flow-step active">
-                <div class="num">1</div>
-                <div><strong>상황 받기</strong><span>사용자의 고민을 업무 상황, 관계, 목표로 분리합니다.</span></div>
+        <div class="page-grid">
+          <section class="card chat-shell" aria-label="리더십 코칭 대화">
+            <div class="chat-header">
+              <div class="chat-title">
+                <div class="bot-avatar">AI</div>
+                <div><div class="chat-name">리더십 코치</div><div class="chat-status"><span class="status-dot"></span>대화 가능</div></div>
               </div>
-              <div class="flow-step">
-                <div class="num">2</div>
-                <div><strong>확인 질문</strong><span>정보가 부족하면 선택형 질문으로 맥락을 좁힙니다.</span></div>
+              <div class="chat-header-actions">
+                <button class="icon-button" id="scrollBottomButton" title="최근 대화로 이동" aria-label="최근 대화로 이동"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>
               </div>
-              <div class="flow-step">
-                <div class="num">3</div>
-                <div><strong>인터뷰 근거 검색</strong><span>유사한 신임 리더 경험을 찾아 답변 근거로 붙입니다.</span></div>
-              </div>
-              <div class="flow-step">
-                <div class="num">4</div>
-                <div><strong>코칭 답변</strong><span>진단, 질문, 대화 문장, 주의점을 짧게 제안합니다.</span></div>
-              </div>
-              <div class="flow-step">
-                <div class="num">5</div>
-                <div><strong>실행계획 저장</strong><span>이번 주 행동 1~3개를 남겨 다음 대화에 이어 씁니다.</span></div>
+            </div>
+            <div class="chat-log" id="chatLog" aria-live="polite"></div>
+            <div class="composer">
+              <div class="composer-context"><span id="composerLabel">고민을 직접 입력하세요</span><span>Enter 전송 · Shift+Enter 줄바꿈</span></div>
+              <div class="composer-row">
+                <textarea id="chatInput" placeholder="지금 겪고 있는 리더십 고민을 적어주세요." aria-label="고민 또는 답변 입력"></textarea>
+                <button class="send" id="sendButton" aria-label="전송"><svg viewBox="0 0 24 24" fill="none"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
               </div>
             </div>
           </section>
 
-          <section class="card decision-card">
-            <h2 style="padding:0">팀에서 결정할 것</h2>
-            <p>1. 좌측 예시를 유지할지</p>
-            <p>2. 답변 근거를 기본 접힘으로 둘지</p>
-            <p>3. 실행계획 저장을 MVP에 넣을지</p>
-            <button class="copy" id="copySummary">의사결정 요약 복사</button>
-          </section>
-        </aside>
+          <aside class="card decision-panel" id="decisionPanel" aria-label="의사결정 정보"></aside>
+        </div>
       </section>
     </main>
   </div>
 
-  <div class="toast" id="toast">복사되었습니다.</div>
+  <div class="modal-backdrop" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-head"><h2 class="modal-title" id="modalTitle">상세 보기</h2><button class="modal-close" id="modalClose" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
 
   <script>
-    const scenarios = {
-      feedback: {
-        title: "성과 피드백 코칭",
-        sub: "낮은 성과를 어떻게 말할지 정리하고, 면담 문장까지 제안합니다.",
-        user: "팀원이 계속 마감이 늦고 품질도 낮은데, 강하게 말하면 관계가 나빠질까 걱정됩니다.",
-        question: "먼저 확인할게요. 지금 가장 가까운 목표는 무엇인가요?",
-        choices: ["이번 주 면담 준비", "성과 기준 정리", "관계 훼손 최소화"],
-        answer: "상황 요약\n성과 문제가 반복되고 있지만, 리더는 관계 손상을 우려해 명확한 기준을 말하지 못하고 있습니다.\n\n코칭 질문\n- 기대한 결과와 실제 결과의 차이를 한 문장으로 말하면 무엇인가요?\n- 이 팀원이 바로 바꿔야 할 행동은 하나만 고르면 무엇인가요?\n\n면담 문장 예시\n\"이번 대화는 질책이 아니라, 앞으로 맞춰야 할 기준을 분명히 하기 위한 자리입니다. 최근 두 번의 마감 지연과 산출물 수정이 있었고, 다음 업무부터는 마감 하루 전 초안 공유를 기준으로 맞춰보고 싶습니다.\"\n\n이번 주 실행계획\n1. 최근 사례 2개만 정리한다.\n2. 기대 기준을 행동 문장으로 쓴다.\n3. 면담 마지막에 다음 확인 일정을 잡는다.",
-        ref: ["성과 피드백 인터뷰", "초기 리더 7명", "신임 리더들은 평가보다 기준 합의가 먼저 필요하다고 반복해서 말했다."]
+    const icon = {
+      check:'<svg viewBox="0 0 24 24" fill="none"><path d="m5 12 4 4L19 6"/></svg>',
+      alert:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 3 2.5 20h19Z"/><path d="M12 9v4M12 17h.01"/></svg>',
+      summary:'<svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16M4 12h10M4 19h13"/></svg>',
+      users:'<svg viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>'
+    };
+
+    const cases = {
+      case1:{
+        number:'CASE 1',type:'맞춤 가이드형',title:'개별 면담을 앞둔 리더',sub:'바로 쓸 수 있는 기본 방향을 먼저 안내하고, 필요한 맥락만 확인한 뒤 선배 경험과 실행안을 제안합니다.',
+        example:'나 오늘 팀원들하고 개별 면담을 해야 하는데, 방법 알려줘.',
+        placeholder:'예: 오늘 팀원과 면담이 있는데 어떤 순서로 이야기해야 할지 모르겠어요.',
+        empathy:'오늘 바로 면담을 앞두고 있으면, 무엇부터 어떻게 꺼내야 할지 부담될 수 있어요.',
+        acknowledge:'면담의 목적이 분명해지면 질문과 대화 순서도 훨씬 정리하기 쉬워집니다.',
+        immediate:'오늘 면담은 <strong>목적 안내 → 팀원의 이야기 → 다음 행동 합의</strong> 순서로 시작하면 됩니다.',
+        q1:'이번 면담의 가장 중요한 목적은 무엇인가요?',
+        o1:['관계 형성','업무 진행상황 점검','역할과 업무 조정','성과 또는 태도 피드백'],
+        q2:'면담에서 가장 걱정되는 점은 무엇인가요?',
+        o2:['팀원이 말을 잘 하지 않을 것 같아요','시간이 부족해요','민감한 피드백이 있어요','특별한 걱정은 없어요'],
+        demo:['성과 또는 태도 피드백','민감한 피드백이 있어요'],
+        intent:'코칭·피드백 스킬',tags:'1:1 면담 · 면담 목적 · 피드백 민감도',mode:'정보 요청 → 맞춤 가이드',
+        senior:[
+          {profile:'신임 팀장 · 팀원 7명',experience:'처음부터 조언하지 않고 최근 업무에서 잘된 점과 막힌 점을 각각 물었다. 마지막에는 다음 면담 전까지 서로 할 일을 한 가지씩만 합의했다.',principle:'리더의 설명보다 팀원의 발화를 먼저 확보하고, 다음 행동을 한 가지로 좁힌다.',condition:'관계 형성이나 업무 점검처럼 팀원의 관점을 충분히 들어야 하는 면담'},
+          {profile:'현장 조직 리더 · 피드백 면담 경험',experience:'민감한 피드백이 있을 때 성격이나 태도를 평가하지 않고, 관찰한 사실과 업무 영향을 먼저 설명한 뒤 기대 행동을 합의했다.',principle:'사실·영향·기대 행동을 분리하여 말하고 반응을 확인한다.',condition:'구체적인 사실이 확인되어 있고 개선 기대를 분명히 전달해야 하는 면담'}
+        ],
+        detailTitle:'개별 면담 질문과 대화 예시'
       },
-      delegation: {
-        title: "위임 설계 코칭",
-        sub: "맡길 일, 확인 주기, 리더가 직접 해야 할 일을 나눕니다.",
-        user: "업무를 맡겼는데 결과가 기대와 달라서 결국 제가 다시 하게 됩니다. 어떻게 위임해야 할까요?",
-        question: "위임이 실패하는 지점은 어디에 더 가깝나요?",
-        choices: ["기준이 불명확함", "중간 확인이 없음", "역량보다 큰 업무"],
-        answer: "상황 요약\n위임 자체보다 위임의 조건이 부족합니다. 결과물 기준, 중간 확인, 실패했을 때의 지원 방식이 먼저 정리되어야 합니다.\n\n코칭 질문\n- 결과물의 완료 기준을 예시로 보여줬나요?\n- 중간 확인 시점은 업무 시작 전에 합의했나요?\n\n실행계획\n1. 업무를 통째로 주지 말고 첫 산출물 단위를 줄인다.\n2. 완료 기준 예시를 먼저 보여준다.\n3. 첫 번째 확인 시점은 24~48시간 안으로 잡는다.",
-        ref: ["첫 위임 경험 인터뷰", "신임 관리자 그룹", "성공한 위임은 권한 이양보다 기대 기준과 확인 주기를 먼저 맞춘 사례가 많았다."]
+      case2:{
+        number:'CASE 2',type:'상황 해결형',title:'신입·파견직의 업무 배분을 고민하는 리더',sub:'고용형태가 아니라 업무 위험도, 준비도, 공식 역할 범위를 기준으로 위임 수준을 제안합니다.',
+        example:'팀원들이 다섯 명인데 두 명은 신입이고 세 명은 파견직원이야. 어떻게 업무를 나누고 어디까지 맡겨야 할지 모르겠어.',
+        placeholder:'예: 반복 업무와 판단 업무가 섞여 있는데 누구에게 어디까지 맡길지 고민입니다.',
+        empathy:'구성원마다 경험과 역할이 다르면, 공정하게 나누면서도 어디까지 맡길지 판단하기가 쉽지 않습니다.',
+        acknowledge:'실패 영향이 큰 업무와 구성원의 준비도를 나눠 보면 위임 범위를 훨씬 안전하게 정할 수 있습니다.',
+        immediate:'업무는 사람별로 나누기 전에 <strong>위험도·판단 필요 수준·반복성</strong>으로 먼저 구분하는 것이 좋습니다.',
+        q1:'현재 업무 중 실패했을 때 영향이 가장 큰 일은 무엇인가요?',
+        o1:['대외 보고·의사결정 업무','부서 간 조율 업무','반복 운영업무','업무별로 달라요'],
+        q2:'신입 두 명의 현재 준비도는 어느 정도인가요?',
+        o2:['기준만 주면 혼자 수행 가능','초안은 가능하지만 점검 필요','업무 방법부터 함께 알려줘야 함','두 사람의 수준이 다름'],
+        demo:['대외 보고·의사결정 업무','초안은 가능하지만 점검 필요'],
+        intent:'위임·개입 수준 / 공정한 업무 배분',tags:'혼합 인력 · 준비도 · 업무 위험도 · 역할 범위',mode:'상황 해결형',
+        senior:[
+          {profile:'운영 조직 리더 · 신입과 외부인력 혼합',experience:'사람별로 일을 먼저 나누지 않고 업무를 네 등급으로 구분했다. 반복 업무는 단독 수행, 판단 업무는 중간점검, 대외 책임 업무는 사전승인을 두었다.',principle:'업무 위험도와 구성원 준비도를 교차해 위임 수준을 정한다.',condition:'업무 종류가 다양하고 숙련도 차이가 큰 혼합 인력 조직'},
+          {profile:'지원 조직 리더 · 신규 인력 온보딩',experience:'신입에게는 완결된 큰 업무보다 기준이 명확한 작은 단위를 맡기고, 첫 두 번은 중간 산출물을 확인한 뒤 독립 범위를 넓혔다.',principle:'처음부터 넓게 맡기기보다 작은 성공과 짧은 점검으로 독립 범위를 확장한다.',condition:'업무 방법은 익혔지만 독립적인 판단 경험이 부족한 구성원'}
+        ],
+        detailTitle:'업무 배분표 예시'
       },
-      conflict: {
-        title: "팀 갈등 개입 코칭",
-        sub: "리더가 바로 판정하지 않고 갈등을 업무 기준으로 돌리는 흐름입니다.",
-        user: "두 팀원이 계속 충돌합니다. 제가 누구 편을 들 수도 없고, 어디까지 개입해야 할지 모르겠습니다.",
-        question: "현재 충돌은 어느 쪽에 더 가까운가요?",
-        choices: ["역할 경계 충돌", "커뮤니케이션 방식", "성과 책임 다툼"],
-        answer: "상황 요약\n개인 간 감정처럼 보이지만, 리더는 먼저 업무 기준과 의사결정 기준을 분리해서 봐야 합니다.\n\n코칭 질문\n- 두 사람이 서로 다르게 이해하는 책임 범위는 무엇인가요?\n- 지금 당장 합의해야 할 업무 기준은 무엇인가요?\n\n개입 방식\n1. 각자 따로 사실과 요구를 듣는다.\n2. 공동 면담에서는 성격 평가를 금지하고 업무 기준만 다룬다.\n3. 결정권자, 협의 방식, 이견 발생 시 처리 기준을 문서로 남긴다.",
-        ref: ["팀 내 충돌 조정 인터뷰", "현장 리더 사례", "효과적인 개입은 누가 맞는지 판정하기보다 업무 기준을 다시 세운 경우였다."]
+      case3:{
+        number:'CASE 3',type:'긴급 상황 해결형',title:'성과 압박 속에서 팀의 속도가 느린 리더',sub:'구성원을 일괄 재촉하기보다 핵심 성과와 병목을 먼저 좁혀 단기 실행안을 제시합니다.',
+        example:'성과를 빠르게 내야 하는데 직원들 속도는 느리고 상사는 압박중. 어떻게 해야 하지?',
+        placeholder:'예: 업무가 너무 많고 승인도 늦어져서 전체 일정이 밀리고 있습니다.',
+        empathy:'성과 압박은 큰데 팀의 속도가 따라오지 않으면, 리더가 혼자 전체를 끌고 가는 느낌이 들 수 있습니다.',
+        acknowledge:'지금처럼 압박이 큰 상황에서는 사람을 더 재촉하기보다 병목과 우선순위를 먼저 분리하는 것이 중요합니다.',
+        immediate:'지금은 모두를 더 재촉하기보다 <strong>이번 주 핵심 결과와 병목 원인</strong>을 먼저 좁혀야 합니다.',
+        q1:'현재 팀의 속도를 가장 많이 늦추는 원인은 무엇인가요?',
+        o1:['역량 부족','기준 불명확','우선순위 과다','승인 대기','인력 부족','동기·태도'],
+        q2:'상사와 이번 주 최우선 결과물에 합의되어 있나요?',
+        o2:['1~2개로 합의되어 있어요','요구가 계속 추가돼요','우선순위가 불명확해요','아직 확인하지 못했어요'],
+        demo:['우선순위 과다','요구가 계속 추가돼요'],
+        intent:'업무과중·성과 압박 / 상향관리',tags:'단기 성과 · 팀 병목 · 상사 압박 · 우선순위',mode:'긴급 상황 해결형',
+        senior:[
+          {profile:'프로젝트 리더 · 단기 마감 상황',experience:'모두에게 더 빨리 하라고 하지 않고 상사와 이번 주 결과물 두 개만 합의했다. 각 업무의 병목이 사람인지 승인인지부터 확인했다.',principle:'속도 요구보다 우선순위와 병목을 먼저 정리한다.',condition:'요구가 많고 납기가 짧아 모든 일을 동시에 추진하기 어려운 상황'},
+          {profile:'현장 리더 · 다중 과제 운영',experience:'매일 긴 회의를 하는 대신 10분 동안 완료된 일, 막힌 일, 필요한 의사결정만 확인했다. 리더는 승인 대기와 부서 간 장애물을 제거하는 데 집중했다.',principle:'리더가 진척을 감시하기보다 병목을 제거하는 역할을 맡는다.',condition:'업무 담당자는 정해져 있지만 승인·조율 지연이 반복되는 상황'}
+        ],
+        detailTitle:'상사 보고문과 병목별 대응 예시'
       }
     };
 
-    const messages = document.getElementById("messages");
-    const input = document.getElementById("input");
-    const flowSteps = Array.from(document.querySelectorAll(".flow-step"));
-    const stagePills = Array.from(document.querySelectorAll(".stage-pills span"));
-    let current = "feedback";
-    let toastTimer;
+    const states = Object.fromEntries(Object.keys(cases).map(key=>[key,{stage:0,question:'',answers:[],messages:[],seniorIndex:0,saved:false,busy:false,sequence:0}]));
+    let activeCase='case1';
+    const chatLog=document.getElementById('chatLog');
+    const chatInput=document.getElementById('chatInput');
+    const decisionPanel=document.getElementById('decisionPanel');
 
-    function escapeHtml(text) {
-      return text.replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      })[char]);
-    }
-
-    function setActiveStep(index) {
-      flowSteps.forEach((step, i) => step.classList.toggle("active", i <= index));
-      stagePills.forEach((pill, i) => pill.classList.toggle("active", i <= Math.min(index, 3)));
-    }
-
-    function addMessage(role, text, options = {}) {
-      const article = document.createElement("article");
-      article.className = `message ${role}`;
-      const avatar = role === "user" ? "나" : "AI";
-      const choices = options.choices ? `
-        <div class="choice-bar">
-          ${options.choices.map(choice => `<button class="choice" type="button">${escapeHtml(choice)}</button>`).join("")}
-        </div>` : "";
-      const reference = options.ref ? `
-        <details class="reference">
-          <summary>참고 인터뷰 근거 보기</summary>
-          <div class="reference-card">
-            <strong>${escapeHtml(options.ref[0])}</strong>
-            <span>${escapeHtml(options.ref[1])}</span>
-            <div>${escapeHtml(options.ref[2])}</div>
-          </div>
-        </details>` : "";
-
-      article.innerHTML = `
-        <div class="avatar">${avatar}</div>
-        <div class="bubble">${escapeHtml(text)}${choices}${reference}</div>`;
-      messages.appendChild(article);
-      messages.scrollTop = messages.scrollHeight;
-    }
-
-    function loadScenario(key) {
-      current = key;
-      const data = scenarios[key];
-      document.getElementById("chatTitle").textContent = data.title;
-      document.getElementById("chatSub").textContent = data.sub;
-      document.querySelectorAll(".scenario").forEach(btn => btn.classList.toggle("active", btn.dataset.case === key));
-      messages.innerHTML = "";
-      setActiveStep(1);
-      addMessage("assistant", "안녕하세요. 지금 겪는 리더십 상황을 한두 문장으로 적어주세요. 먼저 상황을 좁힌 뒤, 유사 인터뷰 근거를 찾아 실행 가능한 코칭으로 정리하겠습니다.");
-      addMessage("user", data.user);
-      addMessage("assistant", data.question, { choices: data.choices });
-      input.value = "";
-    }
-
-    function answerWithCoach(extraText) {
-      const data = scenarios[current];
-      if (extraText.trim()) addMessage("user", extraText.trim());
-      setActiveStep(4);
-      addMessage("assistant", data.answer, { ref: data.ref });
-    }
-
-    document.querySelectorAll(".scenario").forEach(btn => {
-      btn.addEventListener("click", () => loadScenario(btn.dataset.case));
-    });
-
-    messages.addEventListener("click", event => {
-      const choice = event.target.closest(".choice");
-      if (!choice) return;
-      answerWithCoach(choice.textContent);
-    });
-
-    document.getElementById("composer").addEventListener("submit", event => {
-      event.preventDefault();
-      if (!input.value.trim()) return;
-      answerWithCoach(input.value);
-      input.value = "";
-    });
-
-    document.getElementById("copySummary").addEventListener("click", async () => {
-      const text = [
-        "리더십 AI 코치 챗봇 의사결정 요약",
-        "- 메인 화면은 좌측 예시 + 중앙 채팅 + 우측 처리 흐름으로 구성",
-        "- 챗봇은 상황 입력 > 확인 질문 > 인터뷰 근거 검색 > 코칭 응답 > 실행계획 저장 순서",
-        "- 참고 인터뷰는 답변 아래 접힌 카드로 제공",
-        "- MVP는 실제 채팅 경험과 답변 신뢰도 확인에 집중"
-      ].join("\\n");
-      try {
-        await navigator.clipboard.writeText(text);
-        showToast("의사결정 요약을 복사했습니다.");
-      } catch {
-        showToast("브라우저 권한 때문에 복사하지 못했습니다.");
+    function esc(value=''){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
+    function now(){return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});}
+    function message(role,html){return {type:'message',role,html,time:now()};}
+    function quick(options){return {type:'quick',options};}
+    function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+    function isCurrentSequence(key,token){return states[key]&&states[key].sequence===token;}
+    function removeTyping(key){states[key].messages=states[key].messages.filter(item=>item.type!=='typing');}
+    function repaint(key){if(activeCase===key)render();}
+    async function revealBotSteps(key,token,steps){
+      const state=states[key];
+      for(const step of steps){
+        if(!isCurrentSequence(key,token))return false;
+        state.messages.push({type:'typing'});repaint(key);
+        await delay(step.wait||520);
+        if(!isCurrentSequence(key,token))return false;
+        removeTyping(key);state.messages.push(...step.items);repaint(key);
+        if(step.pause)await delay(step.pause);
       }
-    });
+      if(isCurrentSequence(key,token)){state.busy=false;repaint(key);return true;}
+      return false;
+    }
+    function empathyReply(d){return `<span class="empathy-lead">먼저 마음을 짚어보면</span>${d.empathy}`;}
+    function followupReply(d,text){return `<span class="empathy-lead">말씀하신 상황을 이해했습니다</span>${d.acknowledge}<br><br><strong>${esc(text)}</strong>을 중심으로 보겠습니다.<br><br><strong>${esc(d.q2)}</strong>`;}
 
-    function showToast(text) {
-      const toast = document.getElementById("toast");
-      toast.textContent = text;
-      toast.classList.add("show");
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+    function setCase(key){
+      activeCase=key;
+      document.querySelectorAll('.case-tab').forEach(tab=>{const selected=tab.dataset.case===key;tab.classList.toggle('active',selected);tab.setAttribute('aria-selected',selected)});
+      const d=cases[key];
+      document.getElementById('caseNumber').textContent=d.number;
+      document.getElementById('caseType').textContent=d.type;
+      document.getElementById('pageTitle').textContent=d.title;
+      document.getElementById('pageSub').textContent=d.sub;
+      chatInput.placeholder=d.placeholder;
+      render();
     }
 
-    loadScenario("feedback");
+    function resetCase(key=activeCase){
+      states[key]={stage:0,question:'',answers:[],messages:[],seniorIndex:0,saved:false,busy:false,sequence:(states[key]?.sequence||0)+1};
+      if(key===activeCase)render();
+    }
+
+    function emptyState(){
+      const d=cases[activeCase];
+      return `<div class="empty-state"><div class="empty-inner"><div class="empty-icon">${icon.summary}</div><h2 class="empty-title">지금 어떤 리더십 고민이 있으신가요?</h2><p class="empty-text">지금 느끼는 부담을 먼저 짚고, 바로 적용할 수 있는 기본 방향과 꼭 필요한 질문만 짧게 이어가겠습니다.</p><button class="example-question" data-example><span class="example-label">이 CASE의 예시 고민 불러오기</span>${esc(d.example)}</button></div></div>`;
+    }
+
+    function renderMessage(item){
+      if(item.type==='message'){
+        const bot=item.role==='bot';
+        return `<div class="message-row ${item.role}">${bot?'<div class="mini-avatar">AI</div>':''}<div class="message-group"><div class="bubble">${item.html}</div><div class="message-meta">${item.time}</div></div></div>`;
+      }
+      if(item.type==='quick') return `<div class="quick-replies">${item.options.map(option=>`<button class="quick" data-reply="${esc(option)}">${esc(option)}</button>`).join('')}</div>`;
+      if(item.type==='summary') return renderSummary();
+      if(item.type==='senior') return renderSenior();
+      if(item.type==='action') return renderAction();
+      return '';
+    }
+
+    function summaryData(){
+      const s=states[activeCase],a1=s.answers[0]||'확인 전',a2=s.answers[1]||'확인 전';
+      if(activeCase==='case1'){
+        const headline=a1.includes('피드백')?`이번 면담은 ${a1}이 핵심이며, ${a2}에 대비한 전달 구조가 필요합니다.`:`이번 면담은 ${a1}이 핵심이며, ${a2}을 고려해 팀원의 발화 시간을 확보해야 합니다.`;
+        return {headline,facts:[['면담 목적',a1],['우려 지점',a2],['우선 판단',a1.includes('피드백')?'사실·영향·기대 행동을 구분':'질문과 경청을 먼저 확보']]};
+      }
+      if(activeCase==='case2') return {headline:`${a1}의 위험을 리더가 통제하면서, 신입은 “${a2}” 수준에 맞춰 위임 범위를 정해야 합니다.`,facts:[['고위험 업무',a1],['신입 준비도',a2],['우선 판단','업무 위험도 × 준비도 × 공식 역할 범위']]};
+      return {headline:`현재 핵심 병목은 ${a1}이며, 상사와의 우선순위 상태는 “${a2}”입니다.`,facts:[['주요 병목',a1],['상향 정렬',a2],['우선 판단',a1==='동기·태도'?'구조적 원인을 먼저 배제한 뒤 태도 판단':'성과 범위와 병목 제거를 우선']]};
+    }
+
+    function renderSummary(){
+      const data=summaryData();
+      return `<section class="summary-card"><div class="summary-title">${icon.summary}<span>현재 상황을 이렇게 이해했습니다</span></div><p class="summary-headline">${esc(data.headline)}</p><ul class="summary-list">${data.facts.map(([k,v])=>`<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul></section>`;
+    }
+
+    function seniorData(){
+      const d=cases[activeCase],s=states[activeCase];
+      let base=0;
+      if(activeCase==='case1'&&s.answers[0]?.includes('피드백'))base=1;
+      if(activeCase==='case2'&&s.answers[1]?.includes('방법부터'))base=1;
+      if(activeCase==='case3'&&['승인 대기','기준 불명확'].includes(s.answers[0]))base=1;
+      const index=(base+s.seniorIndex)%d.senior.length;
+      const senior=d.senior[index];
+      return {...senior,index};
+    }
+
+    function renderSenior(){
+      const d=cases[activeCase],s=states[activeCase],senior=seniorData();
+      const reason=`현재 입력한 “${s.answers[0]}”과 “${s.answers[1]}” 조건이 유사한 경험입니다.`;
+      return `<section class="senior-card"><div class="senior-head"><div class="senior-heading">${icon.users}<span>비슷한 상황의 선배 경험</span></div><span class="source-badge">경험 요약 예시</span></div><div class="senior-body"><div class="match-reason"><strong>추천 이유</strong> · ${esc(reason)}</div><div class="senior-profile"><span class="profile-mark">선</span><span>${esc(senior.profile)}</span></div><div class="experience-label">선배 경험 요약</div><p class="experience-text">${esc(senior.experience)}</p><div class="senior-grid"><div class="insight-box"><b>AI가 추출한 판단 기준</b><span>${esc(senior.principle)}</span></div><div class="insight-box"><b>이 조언이 유효한 조건</b><span>${esc(senior.condition)}</span></div></div><div class="senior-actions"><button class="button" data-context>원문 맥락 보기</button><button class="button ghost" data-another-senior>다른 경험 보기</button></div></div></section>`;
+    }
+
+    function actionData(){
+      const s=states[activeCase],a1=s.answers[0]||'',a2=s.answers[1]||'';
+      if(activeCase==='case1'){
+        if(a1.includes('피드백')) return {title:'민감한 피드백 면담은 이렇게 진행하세요',kicker:'사실과 평가를 구분하는 것이 핵심입니다.',steps:[['목적과 안전선 안내','평가를 확정하려는 자리가 아니라 사실과 개선 방향을 함께 확인한다고 안내합니다.'],['관찰 사실 제시','성격이나 태도 대신 구체적인 행동과 발생 시점을 설명합니다.'],['업무 영향 확인','해당 행동이 일정·품질·협업에 미친 영향을 연결합니다.'],['기대 행동 합의','다음에 무엇을 다르게 할지와 확인 시점을 정합니다.']],guard:a2.includes('민감')?'감정이 높아지면 결론을 밀어붙이지 말고, 사실관계와 다음 대화 시점을 먼저 정하세요.':null};
+        if(a1.includes('관계')) return {title:'관계 형성 면담은 이렇게 진행하세요',kicker:'리더가 말하는 시간보다 팀원이 말하는 시간을 길게 둡니다.',steps:[['목적 안내','업무 평가가 아니라 서로의 일하는 방식과 필요한 지원을 이해하기 위한 자리라고 알립니다.'],['경험 질문','최근 잘된 일과 어려웠던 일을 각각 묻습니다.'],['선호 방식 확인','보고·피드백·지원 방식에서 선호하는 점을 확인합니다.'],['작은 약속 합의','다음 면담 전까지 서로 해볼 행동을 한 가지씩 정합니다.']]};
+        return {title:'오늘 면담은 이렇게 진행하세요',kicker:'목적을 분명히 하고 팀원의 관점을 먼저 듣습니다.',steps:[['면담 목적 안내','오늘 확인할 주제와 시간을 짧게 안내합니다.'],['잘된 점과 막힌 점 확인','업무 진행에서 잘되는 부분과 장애물을 각각 묻습니다.'],['리더의 기대와 지원 정리','기대하는 결과와 리더가 제공할 지원을 구분합니다.'],['다음 행동 합의','담당 행동과 확인 시점을 한 가지씩 정합니다.']]};
+      }
+      if(activeCase==='case2'){
+        const readiness=a2.includes('혼자')?'독립 수행 가능':a2.includes('초안')?'중간점검 필요':a2.includes('방법부터')?'밀착 가이드 필요':'개인별 분리 진단 필요';
+        return {title:'업무를 네 수준으로 나누세요',kicker:`현재 준비도는 “${readiness}”로 보고 첫 위임 범위를 설정합니다.`,steps:[['단독 수행','기준이 명확하고 반복적이며 실패 영향이 낮은 업무'],['중간점검','수행은 맡기되 중간 산출물과 판단 지점을 확인하는 업무'],['사전승인','부서 간 조율이나 중요한 판단이 필요한 업무'],['리더 직접 수행',`${a1}처럼 실패 영향과 대외 책임이 큰 업무`]],guard:'파견직의 세부 업무 범위와 지휘·명령 체계는 사내 인사·노무 기준을 확인한 뒤 확정해야 합니다.'};
+      }
+      const map={
+        '역량 부족':[['성과 범위 축소','이번 주 결과물을 작은 단위로 나눕니다.'],['과업 분해','완료 기준과 예시를 제공하고 중간 산출물을 확인합니다.'],['짧은 코칭','부족한 기술 한 가지에만 집중해 지원합니다.'],['상향 보고','성과 범위 조정과 필요한 지원을 요청합니다.']],
+        '기준 불명확':[['완료 기준 명시','완료 상태·품질 기준·예시를 한 문장으로 정리합니다.'],['이해 확인','팀원이 기준을 자신의 말로 설명하도록 합니다.'],['초기 샘플 검토','완료 후가 아니라 초안 단계에서 방향을 확인합니다.'],['상향 정렬','상사와도 결과물 기준이 같은지 확인합니다.']],
+        '우선순위 과다':[['핵심 성과 1~2개 확정','이번 주 반드시 낼 결과만 남깁니다.'],['중단 목록 합의','지금 하지 않을 업무와 연기할 업무를 명시합니다.'],['담당과 마감 재설정','핵심 결과에 인력과 시간을 다시 배치합니다.'],['추가 요구 통제','새 요구가 들어오면 기존 과제 중 무엇을 미룰지 함께 결정합니다.']],
+        '승인 대기':[['승인 대기 목록화','누가 무엇을 언제까지 결정해야 하는지 보이게 만듭니다.'],['결정 시한 요청','승인이 없을 때 발생할 영향과 함께 시한을 요청합니다.'],['대안 제시','승인 가능한 2개 선택지를 함께 보고합니다.'],['에스컬레이션','기한을 넘기면 상위 의사결정자에게 위험을 알립니다.']],
+        '인력 부족':[['필수 업무 선별','중단 가능한 업무를 먼저 분리합니다.'],['업무 재배치','역할 범위와 숙련도를 기준으로 핵심 업무에 집중시킵니다.'],['지원 요청','필요 인력·기간·미지원 시 영향을 구체화합니다.'],['범위 재합의','인력 조건에 맞춰 납기 또는 품질 범위를 조정합니다.']],
+        '동기·태도':[['구조적 원인 점검','기준·업무량·권한·역량 문제를 먼저 배제합니다.'],['관찰 사실 확인','의도 추정이 아니라 반복된 행동과 영향을 확인합니다.'],['기대 행동 명확화','바뀌어야 할 행동과 기한을 구체적으로 합의합니다.'],['후속 관리','지원 후에도 변화가 없는지 근거를 남기며 확인합니다.']]
+      };
+      return {title:'지금은 이렇게 움직이세요',kicker:a2.includes('추가')?'상사의 추가 요구가 들어올 때 기존 우선순위와 교환하도록 합의합니다.':'성과 범위와 병목 제거를 동시에 관리합니다.',steps:map[a1]||map['우선순위 과다']};
+    }
+
+    function renderAction(){
+      const data=actionData(),s=states[activeCase],d=cases[activeCase];
+      return `<section class="action-card"><div class="action-head"><div><h3 class="action-title">${esc(data.title)}</h3><div class="action-kicker">${esc(data.kicker)}</div></div></div>${data.steps.map((step,index)=>`<div class="action-step"><span class="action-num">${index+1}</span><div><strong>${esc(step[0])}</strong><p>${esc(step[1])}</p></div></div>`).join('')}${data.guard?`<div class="guardrail">${icon.alert}<span>${esc(data.guard)}</span></div>`:''}<div class="result-actions"><button class="button" data-detail>${esc(detailLabel())}</button><button class="button primary" data-save>${s.saved?'저장됨':'실행계획에 저장'}</button></div></section>`;
+    }
+
+    function detailLabel(){return activeCase==='case1'?'면담 질문 보기':activeCase==='case2'?'업무배분표 보기':'상사 보고문 보기'}
+
+    function detailHtml(){
+      const s=states[activeCase];
+      if(activeCase==='case1') return `<h4>면담 시작 문장</h4><div class="copy-box">오늘은 평가를 확정하기보다 현재 상황과 필요한 지원을 확인하려고 합니다. 먼저 최근 업무에서 잘된 점과 어려웠던 점을 듣고 싶습니다.</div><h4>핵심 질문</h4><ul><li>최근 업무에서 가장 잘되고 있다고 느끼는 것은 무엇인가요?</li><li>막히는 지점은 업무 기준, 시간, 협업 중 어디에 가깝나요?</li><li>제가 더 명확히 알려주거나 지원해야 할 부분은 무엇인가요?</li><li>다음 면담 전까지 서로 무엇을 해보기로 할까요?</li></ul>`;
+      if(activeCase==='case2') return `<h4>업무 배분 기준</h4><table><thead><tr><th>업무 특성</th><th>적합한 수행 조건</th><th>위임 수준</th></tr></thead><tbody><tr><td>반복적·기준 명확·실패 영향 낮음</td><td>역할 범위가 허용되고 기준을 숙지한 구성원</td><td>단독 수행 + 초기 점검</td></tr><tr><td>초안 작성·일부 판단 필요</td><td>기본 수행이 가능하지만 판단 경험이 필요한 구성원</td><td>중간점검</td></tr><tr><td>부서 간 조율·중요 판단</td><td>관련 경험과 조율 권한이 있는 구성원</td><td>사전승인</td></tr><tr><td>${esc(s.answers[0]||'대외 책임 업무')}</td><td>최종 책임과 의사결정 권한을 가진 리더</td><td>리더 직접 수행</td></tr></tbody></table><div class="prototype-note">고용형태만으로 업무를 배정하지 않고 역할 범위, 준비도, 업무 위험도를 함께 판단하는 방향을 보여주는 예시입니다.</div>`;
+      return `<h4>상사 보고문 예시</h4><div class="copy-box">이번 주에는 [핵심 결과물 1]과 [핵심 결과물 2]를 우선 완료하겠습니다.
+현재 주요 병목은 [${esc(s.answers[0]||'병목 원인')}]이며, 이를 해소하기 위해 [조치]를 진행하겠습니다.
+추가 요구가 발생할 경우 기존 우선순위 중 연기할 항목을 함께 결정해주시면 일정 준수 가능성을 높일 수 있습니다.
+[완료 예상일]까지 결과를 공유드리겠습니다.</div><h4>병목별 대응 원칙</h4><ul><li>역량 문제: 과업 분해와 중간 산출물 확인</li><li>기준 문제: 완료 기준과 샘플 명시</li><li>승인 문제: 결정 시한과 미결정 시 영향 보고</li><li>우선순위 문제: 추가 요구와 기존 과제의 교환 결정</li></ul>`;
+    }
+
+    function renderDecision(){
+      const d=cases[activeCase],s=states[activeCase];
+      const step=Math.min(s.stage,3);
+      const steps=[['고민 입력','사용자가 상황을 자연어로 입력'],['최소 확인','답에 영향을 주는 맥락만 확인'],['선배 경험','추천 이유와 적용 조건 노출'],['실행안','상황에 맞는 후속 도구 제공']];
+      decisionPanel.innerHTML=`<div class="decision-head"><div class="decision-title">의사결정 정보</div><span class="decision-badge">검토용</span></div><p class="decision-desc">실제 사용자에게는 기본적으로 숨기고, 회의 중 답변 구조를 검토할 때만 표시합니다.</p><div class="stepper">${steps.map((item,index)=>{const status=index<step?'done':index===step?'active':'';return `<div class="step ${status}"><span class="step-dot">${index+1}</span><div><div class="step-name">${item[0]}</div><div class="step-note">${item[1]}</div></div></div>`}).join('')}</div><section class="decision-section"><h3>입력으로 확보한 정보</h3><ul class="fact-list"><li><b>최초 고민</b><span class="${s.question?'':'empty-fact'}">${s.question?esc(s.question):'아직 입력되지 않음'}</span></li><li><b>1차 확인</b><span class="${s.answers[0]?'':'empty-fact'}">${s.answers[0]?esc(s.answers[0]):'아직 확인되지 않음'}</span></li><li><b>2차 확인</b><span class="${s.answers[1]?'':'empty-fact'}">${s.answers[1]?esc(s.answers[1]):'아직 확인되지 않음'}</span></li></ul></section><section class="decision-section"><h3>현재 프로토타입에서 확인 가능</h3><div class="prototype-list"><div class="prototype-row">${icon.check}<span>빈 입력 화면에서 고민을 시작하는 방식</span></div><div class="prototype-row">${icon.check}<span>초기 심리적 공감 후 상황을 재정의하는 응답</span></div><div class="prototype-row">${icon.check}<span>최대 2회의 선택형·직접 입력 핑퐁</span></div><div class="prototype-row">${icon.check}<span>타이핑 표시와 단계별 답변 노출</span></div><div class="prototype-row">${icon.check}<span>선택 결과에 따른 상황 요약과 실행안 분기</span></div><div class="prototype-row">${icon.check}<span>선배 경험의 추천 이유·판단 기준·적용 조건</span></div><div class="prototype-row">${icon.check}<span>면담 질문·업무배분표·상사 보고문 후속 도구</span></div></div></section><section class="decision-section"><h3>현재 적용한 설계안</h3><div class="current-choice"><div class="choice-row"><b>초기 응답</b><span>공감 → 기본 방향 → 확인 질문</span></div><div class="choice-row"><b>답변 노출</b><span>상황 요약 → 선배 경험 → 실행안 순차 표시</span></div><div class="choice-row"><b>확인 질문</b><span>필요 시 최대 2회</span></div><div class="choice-row"><b>선배 조언</b><span>상황 요약 뒤, 실행안 앞</span></div><div class="choice-row"><b>근거 노출</b><span>추천 이유 + 요약 + 적용 조건</span></div><div class="choice-row"><b>상세 산출물</b><span>대화 안의 버튼으로 확장</span></div><div class="choice-row"><b>응답 색상</b><span>Cobalt 단일 브랜드 accent</span></div></div><div class="prototype-warning">${icon.alert}<span>선배 경험 문구는 UX 검토용 예시입니다. 실제 서비스에서는 인터뷰 원문과 AI 요약을 명확히 구분해야 합니다.</span></div></section>`;
+    }
+
+    function render(){
+      const s=states[activeCase],d=cases[activeCase];
+      chatLog.innerHTML=s.messages.length?s.messages.map(renderMessage).join(''):emptyState();
+      document.getElementById('composerLabel').textContent=s.stage===0?'고민을 직접 입력하세요':s.stage<3?'선택하거나 직접 답변하세요':'추가 상황을 입력할 수 있습니다';
+      chatInput.disabled=s.busy;
+      document.getElementById('sendButton').disabled=s.busy;
+      renderDecision();
+      requestAnimationFrame(()=>{chatLog.scrollTop=chatLog.scrollHeight});
+    }
+
+    async function startConversation(text){
+      const key=activeCase,s=states[key],d=cases[key];
+      if(!text.trim())return;
+      s.sequence=(s.sequence||0)+1;const token=s.sequence;
+      s.question=text.trim();s.stage=1;s.answers=[];s.seniorIndex=0;s.saved=false;s.busy=true;
+      s.messages=[message('user',esc(s.question))];
+      chatInput.value='';render();
+      await revealBotSteps(key,token,[
+        {wait:480,items:[message('bot',empathyReply(d))],pause:240},
+        {wait:520,items:[message('bot',`<span class="context-lead">우선 바로 적용할 수 있는 방향입니다</span>${d.immediate}<br><br><strong>${esc(d.q1)}</strong>`),quick(d.o1)]}
+      ]);
+    }
+
+    async function submit(text){
+      const key=activeCase,s=states[key],d=cases[key];
+      text=text.trim();if(!text||s.busy)return;
+      if(s.stage===0){await startConversation(text);return}
+      s.sequence=(s.sequence||0)+1;const token=s.sequence;
+      s.messages=s.messages.filter(item=>item.type!=='quick'&&item.type!=='typing');
+      s.messages.push(message('user',esc(text)));s.answers.push(text);chatInput.value='';s.busy=true;render();
+      if(s.stage===1){
+        s.stage=2;
+        await revealBotSteps(key,token,[
+          {wait:520,items:[message('bot',followupReply(d,text)),quick(d.o2)]}
+        ]);
+      }else if(s.stage===2){
+        s.stage=3;
+        await revealBotSteps(key,token,[
+          {wait:520,items:[message('bot','말씀해주신 내용을 바탕으로, 먼저 현재 상황을 정리해볼게요.'),{type:'summary'}],pause:300},
+          {wait:620,items:[message('bot','비슷한 고민을 겪은 선배 리더의 경험도 함께 찾아봤습니다.'),{type:'senior'}],pause:380},
+          {wait:680,items:[message('bot','선배 경험의 판단 기준을 지금 상황에 적용하면, 다음 순서로 움직이는 것이 좋겠습니다.'),{type:'action'}]}
+        ]);
+      }else{
+        await revealBotSteps(key,token,[
+          {wait:480,items:[message('bot',`추가로 알려주신 <strong>${esc(text)}</strong>도 중요한 조건이네요. 현재 실행안에서 이 부분을 먼저 확인해보세요.`)]}
+        ]);
+      }
+    }
+
+    function renderTyping(){render();}
+
+    async function runDemo(){
+      const key=activeCase,d=cases[key],s=states[key];
+      s.sequence=(s.sequence||0)+1;const token=s.sequence;
+      s.question=d.example;s.stage=1;s.answers=[];s.seniorIndex=0;s.saved=false;s.busy=true;
+      s.messages=[message('user',esc(d.example))];render();showToast('전체 대화 흐름을 순차적으로 재생합니다.');
+      if(!await revealBotSteps(key,token,[
+        {wait:420,items:[message('bot',empathyReply(d))],pause:180},
+        {wait:470,items:[message('bot',`<span class="context-lead">우선 바로 적용할 수 있는 방향입니다</span>${d.immediate}<br><br><strong>${esc(d.q1)}</strong>`)]}
+      ]))return;
+      if(!isCurrentSequence(key,token))return;
+      s.busy=true;s.messages.push(message('user',esc(d.demo[0])));s.answers.push(d.demo[0]);s.stage=2;render();
+      if(!await revealBotSteps(key,token,[{wait:470,items:[message('bot',followupReply(d,d.demo[0]))]}]))return;
+      if(!isCurrentSequence(key,token))return;
+      s.busy=true;s.messages.push(message('user',esc(d.demo[1])));s.answers.push(d.demo[1]);s.stage=3;render();
+      await revealBotSteps(key,token,[
+        {wait:500,items:[message('bot','말씀해주신 내용을 바탕으로, 먼저 현재 상황을 정리해볼게요.'),{type:'summary'}],pause:250},
+        {wait:580,items:[message('bot','비슷한 고민을 겪은 선배 리더의 경험도 함께 찾아봤습니다.'),{type:'senior'}],pause:320},
+        {wait:640,items:[message('bot','선배 경험의 판단 기준을 지금 상황에 적용하면, 다음 순서로 움직이는 것이 좋겠습니다.'),{type:'action'}]}
+      ]);
+    }
+
+    function cycleSenior(){
+      const s=states[activeCase],d=cases[activeCase];s.seniorIndex=(s.seniorIndex+1)%d.senior.length;render();showToast('다른 선배 경험으로 바꿨습니다.');
+    }
+
+    function openModal(title,html){
+      document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=html;document.getElementById('detailModal').classList.add('open');document.getElementById('modalClose').focus();
+    }
+    function closeModal(){document.getElementById('detailModal').classList.remove('open')}
+    let toastTimer;function showToast(text){const toast=document.getElementById('toast');toast.textContent=text;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),1800)}
+
+    document.addEventListener('click',event=>{
+      const tab=event.target.closest('.case-tab');if(tab){setCase(tab.dataset.case);return}
+      if(event.target.closest('[data-example]')){startConversation(cases[activeCase].example);return}
+      const reply=event.target.closest('[data-reply]');if(reply){submit(reply.dataset.reply);return}
+      if(event.target.closest('[data-another-senior]')){cycleSenior();return}
+      if(event.target.closest('[data-context]')){const senior=seniorData();openModal('선배 경험 원문 맥락',`<div class="prototype-note">현재는 의사결정용 프로토타입이므로 실제 인터뷰 원문 대신, 원문이 연결될 위치와 표시 방식을 보여줍니다.</div><h4>경험자 맥락</h4><p>${esc(senior.profile)}</p><h4>경험 요약</h4><p>${esc(senior.experience)}</p><h4>실제 서비스 적용 시</h4><ul><li>원문 발화와 AI 요약을 시각적으로 구분</li><li>조직·직책 등 개인 식별 정보는 비식별화</li><li>현재 사용자 상황과 다른 조건도 함께 표시</li></ul>`);return}
+      if(event.target.closest('[data-detail]')){openModal(cases[activeCase].detailTitle,detailHtml());return}
+      if(event.target.closest('[data-save]')){states[activeCase].saved=true;render();showToast('실행계획에 저장한 상태를 표시했습니다.');return}
+      if(event.target.id==='detailModal')closeModal();
+    });
+
+    document.getElementById('sendButton').addEventListener('click',()=>submit(chatInput.value));
+    chatInput.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submit(chatInput.value)}});
+    document.getElementById('resetButton').addEventListener('click',()=>{resetCase();showToast('현재 CASE를 초기화했습니다.');chatInput.focus()});
+    document.getElementById('demoButton').addEventListener('click',runDemo);
+    document.getElementById('scrollBottomButton').addEventListener('click',()=>chatLog.scrollTo({top:chatLog.scrollHeight,behavior:'smooth'}));
+    document.getElementById('modalClose').addEventListener('click',closeModal);
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')closeModal()});
+    document.getElementById('reviewSwitch').addEventListener('click',event=>{const on=event.currentTarget.classList.toggle('on');event.currentTarget.setAttribute('aria-pressed',on);document.body.classList.toggle('review-off',!on)});
+
+    setCase('case1');
   </script>
 </body>
 </html>
