@@ -545,6 +545,13 @@
       return `<section class="summary-card"><div class="summary-title">${icon.summary}<span>상황 요약</span></div><p class="summary-headline">${esc(data.headline)}</p><ul class="summary-list">${data.facts.map(([k,v])=>`<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul></section>`;
     }
 
+    function empathyAnswer(){
+      const s=states[activeCase],a1=s.answers[0]||'',a2=s.answers[1]||'';
+      if(activeCase==='case1') return `지금 고민에 대한 제 답변은 이렇습니다.<br><br>면담을 잘하는 것보다 먼저, 리더가 이 대화를 어떤 목적으로 여는지 분명히 잡는 게 중요합니다. ${a2}라는 걱정이 있다면 더더욱 결론부터 밀어붙이기보다 사실과 기대 행동을 나눠 말해야 합니다.<br><br><strong>이 상황에서 부담스러운 지점</strong><br>관계를 해치지 않으면서도 리더로서 필요한 말을 해야 한다는 점입니다.`;
+      if(activeCase==='case2') return `지금 고민에 대한 제 답변은 이렇습니다.<br><br>사람별로 바로 나누기보다, 업무를 위험도와 준비도 기준으로 먼저 나누는 편이 안전합니다. ${a1}처럼 실패 영향이 큰 일은 리더가 통제하고, ${a2} 수준에 맞춰 점검 주기를 정하면 됩니다.<br><br><strong>이 상황에서 부담스러운 지점</strong><br>공정하게 나누고 싶지만, 맡긴 뒤 문제가 생기면 리더 책임으로 돌아온다는 점입니다.`;
+      return `지금 고민에 대한 제 답변은 이렇습니다.<br><br>지금은 팀원을 더 재촉하기보다, 이번 주에 반드시 낼 결과와 병목을 좁혀야 합니다. ${a1}이 병목이고 ${a2} 상태라면, 상사와 우선순위를 다시 맞추는 일이 먼저입니다.<br><br><strong>이 상황에서 부담스러운 지점</strong><br>성과 압박은 위에서 오는데 실행 속도는 아래에서 막히는 중간 리더의 압박입니다.`;
+    }
+
     function seniorData(){
       const d=cases[activeCase],s=states[activeCase];
       let base=0;
@@ -587,7 +594,7 @@
     function renderAction(){
       const data=actionData(),s=states[activeCase],d=cases[activeCase];
       const steps=data.steps.slice(0,3);
-      return `<section class="action-card"><div class="action-head"><div><h3 class="action-title">오늘 바로 할 일</h3><div class="action-kicker">${esc(data.title)} · ${esc(data.kicker)}</div></div></div>${steps.map((step,index)=>`<div class="action-step"><span class="action-num">${index+1}</span><div><strong>${esc(step[0])}</strong><p>${esc(step[1])}</p></div></div>`).join('')}${data.guard?`<div class="guardrail">${icon.alert}<span>${esc(data.guard)}</span></div>`:''}<div class="result-actions"><button class="button" data-detail>${esc(detailLabel())}</button><button class="button primary" data-save>${s.saved?'표시됨':'실행계획에 표시'}</button></div></section>`;
+      return `<section class="action-card"><div class="action-head"><div><h3 class="action-title">퀵가이드</h3><div class="action-kicker">${esc(data.title)} · ${esc(data.kicker)}</div></div></div>${steps.map((step,index)=>`<div class="action-step"><span class="action-num">${index+1}</span><div><strong>${esc(step[0])}</strong><p>${esc(step[1])}</p></div></div>`).join('')}${data.guard?`<div class="guardrail">${icon.alert}<span>${esc(data.guard)}</span></div>`:''}<div class="result-actions"><button class="button" data-detail>${esc(detailLabel())}</button><button class="button primary" data-save>${s.saved?'표시됨':'실행계획에 표시'}</button></div></section>`;
     }
 
     function detailLabel(){return activeCase==='case1'?'면담 질문 보기':activeCase==='case2'?'업무배분표 보기':'상사 보고문 보기'}
@@ -608,7 +615,9 @@
       const steps=[['고민 입력','사용자가 상황을 자연어로 입력'],['최소 확인','답에 영향을 주는 맥락만 확인'],['근거와 요약','선배 경험과 판단 기준 노출'],['실행안','오늘 할 일과 후속 도구 제공']];
       const usedInfo=s.stage<3?'아직 최종 답변 전입니다. 답변 생성에는 최초 고민과 확인 답변을 사용합니다.':summaryData().facts.map(([k,v])=>`${k}: ${v}`).join(' · ');
       const missing=s.stage<3?'최종 실행안을 만들기 전 확인 질문 답변이 더 필요합니다.':'실제 서비스에서는 조직 권한, 일정, 회사 정책 차이를 추가로 확인해야 합니다.';
-      decisionPanel.innerHTML=`<div class="decision-head"><div class="decision-title">의사결정 정보</div><span class="decision-badge">팀 검토용</span></div><p class="decision-desc">사용자에게 보이는 대화와 팀 내부 검토 정보를 분리해 보여줍니다. 실제 서비스에서는 이 패널을 기본 숨김으로 둡니다.</p><section class="decision-section"><h3>현재 단계</h3><div class="stepper">${steps.map((item,index)=>{const status=index<step?'done':index===step?'active':'';return `<div class="step ${status}"><span class="step-dot">${index+1}</span><div><div class="step-name">${item[0]}</div><div class="step-note">${item[1]}</div></div></div>`}).join('')}</div></section><section class="decision-section"><h3>확보한 정보</h3><ul class="fact-list"><li><b>최초 고민</b><span class="${s.question?'':'empty-fact'}">${s.question?esc(s.question):'아직 입력되지 않음'}</span></li><li><b>1차 확인</b><span class="${s.answers[0]?'':'empty-fact'}">${s.answers[0]?esc(s.answers[0]):'아직 확인되지 않음'}</span></li><li><b>2차 확인</b><span class="${s.answers[1]?'':'empty-fact'}">${s.answers[1]?esc(s.answers[1]):'아직 확인되지 않음'}</span></li></ul></section><section class="decision-section"><h3>AI가 답변에 쓴 정보</h3><div class="decision-info"><div class="decision-info-item"><b>사용자 화면</b><span>${esc(s.stage<3?'확인 질문으로 맥락을 좁히는 중':'상황 요약, 선배 경험 근거, 오늘 바로 할 일을 순서대로 표시')}</span></div><div class="decision-info-item"><b>답변 근거</b><span>${esc(usedInfo)}</span></div></div></section><section class="decision-section"><h3>아직 부족한 정보</h3><div class="decision-info-item">${esc(missing)}</div></section><section class="decision-section"><details class="decision-details"><summary>현재 적용한 설계안 보기</summary><div class="current-choice"><div class="choice-row"><b>초기 응답</b><span>공감 → 기본 방향 → 확인 질문</span></div><div class="choice-row"><b>답변 노출</b><span>상황 요약 → 선배 경험 → 오늘 바로 할 일</span></div><div class="choice-row"><b>확인 질문</b><span>고정된 레퍼런스 질문 유지</span></div><div class="choice-row"><b>선배 조언</b><span>추천 이유 + 요약 + 적용 조건 + 주의점</span></div><div class="choice-row"><b>상세 산출물</b><span>${esc(detailLabel())} 버튼으로 확장</span></div></div></details><div class="prototype-warning">${icon.alert}<span>선배 경험 문구는 UX 검토용 예시입니다. 실제 서비스에서는 인터뷰 원문과 AI 요약을 명확히 구분해야 합니다.</span></div></section>`;
+      const hypothesis=s.answers[0]?`${s.answers[0]} 맥락에서 사용자가 원하는 것은 일반 조언보다 바로 적용 가능한 판단 기준일 가능성이 큽니다.`:'아직 가설을 세우기 전입니다. 최초 고민을 받아야 합니다.';
+      const questionReason=s.stage===0?'첫 입력 이후 목적을 좁히기 위해 1차 질문이 필요합니다.':s.stage===1?'첫 답변은 방향이고, 다음 질문은 말투·강도·위험도를 정하기 위해 필요합니다.':s.stage===2?'두 번째 답변까지 받은 뒤 요약과 직접 답변을 만들 수 있습니다.':'질문 수는 2회에서 멈추고, 이제 요약·공감·근거·퀵가이드로 전환합니다.';
+      decisionPanel.innerHTML=`<div class="decision-head"><div class="decision-title">의사결정 정보</div><span class="decision-badge">팀 검토용</span></div><p class="decision-desc">사용자에게 보이는 대화와 팀 내부 검토 정보를 분리해 보여줍니다. 실제 서비스에서는 이 패널을 기본 숨김으로 둡니다.</p><section class="decision-section"><h3>현재 단계</h3><div class="stepper">${steps.map((item,index)=>{const status=index<step?'done':index===step?'active':'';return `<div class="step ${status}"><span class="step-dot">${index+1}</span><div><div class="step-name">${item[0]}</div><div class="step-note">${item[1]}</div></div></div>`}).join('')}</div></section><section class="decision-section"><h3>확보한 정보</h3><ul class="fact-list"><li><b>최초 고민</b><span class="${s.question?'':'empty-fact'}">${s.question?esc(s.question):'아직 입력되지 않음'}</span></li><li><b>1차 확인</b><span class="${s.answers[0]?'':'empty-fact'}">${s.answers[0]?esc(s.answers[0]):'아직 확인되지 않음'}</span></li><li><b>2차 확인</b><span class="${s.answers[1]?'':'empty-fact'}">${s.answers[1]?esc(s.answers[1]):'아직 확인되지 않음'}</span></li></ul></section><section class="decision-section"><h3>챗봇이 확인하려는 가설</h3><div class="decision-info-item">${esc(hypothesis)}</div></section><section class="decision-section"><h3>다음 질문이 필요한 이유</h3><div class="decision-info-item">${esc(questionReason)}</div></section><section class="decision-section"><h3>AI가 답변에 쓴 정보</h3><div class="decision-info"><div class="decision-info-item"><b>사용자 화면</b><span>${esc(s.stage<3?'확인 질문으로 맥락을 좁히는 중':'상황 요약 → 공감/직접 답변 → 선배 경험 → 퀵가이드')}</span></div><div class="decision-info-item"><b>답변 근거</b><span>${esc(usedInfo)}</span></div></div></section><section class="decision-section"><h3>아직 부족한 정보</h3><div class="decision-info-item">${esc(missing)}</div></section><section class="decision-section"><details class="decision-details"><summary>현재 적용한 설계안 보기</summary><div class="current-choice"><div class="choice-row"><b>초기 응답</b><span>공감 → 기본 방향 → 확인 질문</span></div><div class="choice-row"><b>답변 노출</b><span>상황 요약 → 공감/직접 답변 → 선배 경험 → 퀵가이드</span></div><div class="choice-row"><b>확인 질문</b><span>고정된 레퍼런스 질문 유지</span></div><div class="choice-row"><b>선배 조언</b><span>추천 이유 + 요약 + 적용 조건 + 주의점</span></div><div class="choice-row"><b>상세 산출물</b><span>${esc(detailLabel())} 버튼으로 확장</span></div></div></details><details class="decision-details" style="margin-top:12px"><summary>이 화면에서 결정할 것</summary><div class="current-choice"><div class="choice-row"><b>질문 수</b><span>2회가 충분한지</span></div><div class="choice-row"><b>선배 경험 위치</b><span>직접 답변 뒤가 자연스러운지</span></div><div class="choice-row"><b>퀵가이드 개수</b><span>3개 이하가 적절한지</span></div><div class="choice-row"><b>검토 패널</b><span>실제 서비스에서 숨김 처리할지</span></div></div></details><div class="prototype-warning">${icon.alert}<span>선배 경험 문구는 UX 검토용 예시입니다. 실제 서비스에서는 인터뷰 원문과 AI 요약을 명확히 구분해야 합니다.</span></div></section>`;
     }
 
     function render(){
@@ -650,8 +659,9 @@
         s.stage=3;
         await revealBotSteps(key,token,[
           {wait:520,items:[message('bot','좋아요. 방금 두 답변을 이어서 보면, 먼저 상황을 이렇게 요약할 수 있습니다.'),{type:'summary'}],pause:300},
-          {wait:620,items:[message('bot','이 요약과 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:380},
-          {wait:680,items:[message('bot','마지막으로 오늘 할 일로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
+          {wait:560,items:[message('bot',empathyAnswer())],pause:320},
+          {wait:620,items:[message('bot','이제 이 답변을 혼자 만든 조언처럼 보이지 않게, 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:380},
+          {wait:680,items:[message('bot','마지막으로 퀵가이드로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
         ]);
       }else{
         await revealBotSteps(key,token,[
@@ -678,8 +688,9 @@
       s.busy=true;s.messages.push(message('user',esc(d.demo[1])));s.answers.push(d.demo[1]);s.stage=3;render();
       await revealBotSteps(key,token,[
         {wait:500,items:[message('bot','좋아요. 방금 두 답변을 이어서 보면, 먼저 상황을 이렇게 요약할 수 있습니다.'),{type:'summary'}],pause:250},
-        {wait:580,items:[message('bot','이 요약과 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:320},
-        {wait:640,items:[message('bot','마지막으로 오늘 할 일로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
+        {wait:540,items:[message('bot',empathyAnswer())],pause:280},
+        {wait:580,items:[message('bot','이제 이 답변을 혼자 만든 조언처럼 보이지 않게, 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:320},
+        {wait:640,items:[message('bot','마지막으로 퀵가이드로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
       ]);
     }
 
