@@ -11,6 +11,10 @@ const html = readFileSync("index.html", "utf8");
   "주의할 차이점",
   "오늘 바로 할 일",
   "실행계획에 표시",
+  "제가 지금 확인하려는 것",
+  "지금은 이렇게 연결해서 보고 있어요",
+  "이 답변을 바탕으로 한 번 더 확인해볼게요",
+  "오늘 할 일로 연결해볼게요",
 ].forEach((text) => assert(html.includes(text), `Missing text: ${text}`));
 
 [

@@ -169,7 +169,7 @@
     .context-lead{display:block;margin-bottom:7px;color:var(--cobalt);font-size:12px;font-weight:700}
     .empathy-lead{display:flex;align-items:center;gap:7px;margin-bottom:7px;color:var(--black-60);font-size:12px;font-weight:700}
     .empathy-lead::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--cobalt)}
-    .message-row,.summary-card,.senior-card,.action-card,.quick-replies{animation:messageIn 300ms var(--ease) both}
+    .message-row,.summary-card,.senior-card,.action-card,.quick-replies,.probe-card{animation:messageIn 300ms var(--ease) both}
     @keyframes messageIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 
     .quick-replies{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 16px 40px}
@@ -179,6 +179,9 @@
     }
     .quick:hover{border-color:var(--cobalt);background:var(--cobalt-10);color:var(--cobalt)}
     .quick:disabled{background:var(--surface)}
+    .probe-card{display:flex;gap:9px;margin:0 0 16px 40px;padding:10px 12px;border:1px dashed var(--cobalt-30);border-radius:12px;background:#fff;color:var(--black-60);font-size:12px;line-height:18px}
+    .probe-card strong{display:block;margin-bottom:2px;color:var(--cobalt);font-size:11px}
+    .probe-card svg{flex:0 0 17px;width:17px;height:17px;margin-top:1px;color:var(--cobalt);stroke-width:1.8}
 
     .typing{display:flex;gap:4px;align-items:center;height:18px}
     .typing span{width:5px;height:5px;border-radius:50%;background:var(--muted-light);animation:typing 1.1s infinite}
@@ -304,7 +307,7 @@
       body.review-off .page-grid{display:block}.review-toggle span{display:none}
     }
     @media(max-width:620px){
-      .topbar-title{font-size:16px}.prototype-badge{display:none}.case-bar{padding-top:12px}.case-tabs{overflow-x:auto}.case-tab{flex:0 0 auto;min-width:158px}.page{padding-top:16px}.page-title{font-size:22px;line-height:28px}.page-actions{justify-content:stretch}.page-actions .button{flex:1}.chat-shell{height:720px;border-radius:12px}.chat-log{padding:16px 12px}.message-group{max-width:86%}.quick-replies,.summary-card,.senior-card,.action-card{margin-left:0}.senior-grid{grid-template-columns:1fr}.summary-list li{grid-template-columns:72px 1fr}.review-toggle{padding-left:8px}.avatar{display:none}
+      .topbar-title{font-size:16px}.prototype-badge{display:none}.case-bar{padding-top:12px}.case-tabs{overflow-x:auto}.case-tab{flex:0 0 auto;min-width:158px}.page{padding-top:16px}.page-title{font-size:22px;line-height:28px}.page-actions{justify-content:stretch}.page-actions .button{flex:1}.chat-shell{height:720px;border-radius:12px}.chat-log{padding:16px 12px}.message-group{max-width:86%}.quick-replies,.summary-card,.senior-card,.action-card,.probe-card{margin-left:0}.senior-grid{grid-template-columns:1fr}.summary-list li{grid-template-columns:72px 1fr}.review-toggle{padding-left:8px}.avatar{display:none}
     }
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
   </style>
@@ -471,6 +474,7 @@
     function now(){return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});}
     function message(role,html){return {type:'message',role,html,time:now()};}
     function quick(options){return {type:'quick',options};}
+    function probe(text){return {type:'probe',text};}
     function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
     function isCurrentSequence(key,token){return states[key]&&states[key].sequence===token;}
     function removeTyping(key){states[key].messages=states[key].messages.filter(item=>item.type!=='typing');}
@@ -489,7 +493,7 @@
       return false;
     }
     function empathyReply(d){return `<span class="empathy-lead">먼저 마음을 짚어보면</span>${d.empathy}`;}
-    function followupReply(d,text){return `<span class="empathy-lead">말씀하신 상황을 이해했습니다</span>${d.acknowledge}<br><br><strong>선택한 맥락</strong><br>${esc(text)}을 중심으로 보겠습니다.<br><br><strong>${esc(d.q2)}</strong>`;}
+    function followupReply(d,text){return `<span class="empathy-lead">말씀하신 상황을 이해했습니다</span>${d.acknowledge}<br><br><strong>선택한 맥락</strong><br>${esc(text)}을 중심으로 보겠습니다.<br><br>이 답변을 바탕으로 한 번 더 확인해볼게요.<br><br><strong>${esc(d.q2)}</strong>`;}
 
     function setCase(key){
       activeCase=key;
@@ -519,6 +523,7 @@
         return `<div class="message-row ${item.role}">${bot?'<div class="mini-avatar">AI</div>':''}<div class="message-group"><div class="bubble">${item.html}</div><div class="message-meta">${item.time}</div></div></div>`;
       }
       if(item.type==='quick') return `<div class="quick-replies">${item.options.map(option=>`<button class="quick" data-reply="${esc(option)}">${esc(option)}</button>`).join('')}</div>`;
+      if(item.type==='probe') return `<div class="probe-card">${icon.summary}<div><strong>제가 지금 확인하려는 것</strong>${esc(item.text)}</div></div>`;
       if(item.type==='summary') return renderSummary();
       if(item.type==='senior') return renderSenior();
       if(item.type==='action') return renderAction();
@@ -625,7 +630,7 @@
       chatInput.value='';render();
       await revealBotSteps(key,token,[
         {wait:480,items:[message('bot',empathyReply(d))],pause:240},
-        {wait:520,items:[message('bot',`<span class="context-lead">우선 바로 적용할 수 있는 방향입니다</span>${d.immediate}<br><br><strong>${esc(d.q1)}</strong>`),quick(d.o1)]}
+        {wait:520,items:[message('bot',`<span class="context-lead">지금은 이렇게 연결해서 보고 있어요</span>${d.immediate}<br><br>답을 바로 확정하기보다, 먼저 방향을 바꾸는 핵심 맥락 하나만 좁혀볼게요.`),probe('이 선택에 따라 답변이 조언형, 면담 준비형, 실행안형 중 어디에 가까운지 달라집니다.'),message('bot',`<strong>${esc(d.q1)}</strong>`),quick(d.o1)]}
       ]);
     }
 
@@ -639,14 +644,14 @@
       if(s.stage===1){
         s.stage=2;
         await revealBotSteps(key,token,[
-          {wait:520,items:[message('bot',followupReply(d,text)),quick(d.o2)]}
+          {wait:520,items:[message('bot',followupReply(d,text)),probe('방금 답변은 큰 방향이고, 이번 질문은 실제 대화 톤과 위험도를 조절하기 위한 확인입니다.'),quick(d.o2)]}
         ]);
       }else if(s.stage===2){
         s.stage=3;
         await revealBotSteps(key,token,[
-          {wait:520,items:[message('bot','말씀해주신 내용을 바탕으로, 먼저 현재 상황을 정리해볼게요.'),{type:'summary'}],pause:300},
-          {wait:620,items:[message('bot','비슷한 고민을 겪은 선배 리더의 경험도 함께 찾아봤습니다.'),{type:'senior'}],pause:380},
-          {wait:680,items:[message('bot','선배 경험의 판단 기준을 지금 상황에 적용하면, 다음 순서로 움직이는 것이 좋겠습니다.'),{type:'action'}]}
+          {wait:520,items:[message('bot','좋아요. 방금 두 답변을 이어서 보면, 먼저 상황을 이렇게 요약할 수 있습니다.'),{type:'summary'}],pause:300},
+          {wait:620,items:[message('bot','이 요약과 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:380},
+          {wait:680,items:[message('bot','마지막으로 오늘 할 일로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
         ]);
       }else{
         await revealBotSteps(key,token,[
@@ -664,17 +669,17 @@
       s.messages=[message('user',esc(d.example))];render();showToast('전체 대화 흐름을 순차적으로 재생합니다.');
       if(!await revealBotSteps(key,token,[
         {wait:420,items:[message('bot',empathyReply(d))],pause:180},
-        {wait:470,items:[message('bot',`<span class="context-lead">우선 바로 적용할 수 있는 방향입니다</span>${d.immediate}<br><br><strong>${esc(d.q1)}</strong>`)]}
+        {wait:470,items:[message('bot',`<span class="context-lead">지금은 이렇게 연결해서 보고 있어요</span>${d.immediate}<br><br>답을 바로 확정하기보다, 먼저 방향을 바꾸는 핵심 맥락 하나만 좁혀볼게요.`),probe('이 선택에 따라 답변이 조언형, 면담 준비형, 실행안형 중 어디에 가까운지 달라집니다.'),message('bot',`<strong>${esc(d.q1)}</strong>`)]}
       ]))return;
       if(!isCurrentSequence(key,token))return;
       s.busy=true;s.messages.push(message('user',esc(d.demo[0])));s.answers.push(d.demo[0]);s.stage=2;render();
-      if(!await revealBotSteps(key,token,[{wait:470,items:[message('bot',followupReply(d,d.demo[0]))]}]))return;
+      if(!await revealBotSteps(key,token,[{wait:470,items:[message('bot',followupReply(d,d.demo[0])),probe('방금 답변은 큰 방향이고, 이번 질문은 실제 대화 톤과 위험도를 조절하기 위한 확인입니다.')]}]))return;
       if(!isCurrentSequence(key,token))return;
       s.busy=true;s.messages.push(message('user',esc(d.demo[1])));s.answers.push(d.demo[1]);s.stage=3;render();
       await revealBotSteps(key,token,[
-        {wait:500,items:[message('bot','말씀해주신 내용을 바탕으로, 먼저 현재 상황을 정리해볼게요.'),{type:'summary'}],pause:250},
-        {wait:580,items:[message('bot','비슷한 고민을 겪은 선배 리더의 경험도 함께 찾아봤습니다.'),{type:'senior'}],pause:320},
-        {wait:640,items:[message('bot','선배 경험의 판단 기준을 지금 상황에 적용하면, 다음 순서로 움직이는 것이 좋겠습니다.'),{type:'action'}]}
+        {wait:500,items:[message('bot','좋아요. 방금 두 답변을 이어서 보면, 먼저 상황을 이렇게 요약할 수 있습니다.'),{type:'summary'}],pause:250},
+        {wait:580,items:[message('bot','이 요약과 비슷한 패턴의 선배 경험을 하나 붙여볼게요. 그대로 따라 하라는 뜻보다는 판단 기준을 빌려오는 용도입니다.'),{type:'senior'}],pause:320},
+        {wait:640,items:[message('bot','마지막으로 오늘 할 일로 연결해볼게요. 지금 단계에서는 크게 벌리기보다 바로 움직일 수 있는 것만 남기겠습니다.'),{type:'action'}]}
       ]);
     }
 
